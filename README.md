@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Wise
 
-## Getting Started
+Money without borders — send, spend, and receive internationally.
 
-First, run the development server:
+A mobile-first personal finance PWA inspired by the Wise dark-mode iOS experience: multi-currency balances, transfers, conversion, cards, and recipients.
+
+## Tech stack
+
+- Next.js 15 (App Router) + TypeScript (strict)
+- Tailwind CSS v4
+- Zustand + localStorage
+- React Hook Form + Zod
+- Framer Motion, Recharts, Lucide React
+- `@ducanh2912/next-pwa`
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Sign in
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Field | Value |
+| --- | --- |
+| Email | `raza@wise.com` |
+| Password | `wise1234` |
 
-## Learn More
+Or tap **Continue** on the login screen.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Development server (Turbopack) |
+| `npm run build` | Production build + service worker |
+| `npm start` | Serve production build |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript check |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project structure
 
-## Deploy on Vercel
+```
+src/
+  app/           # Routes (auth + app shell)
+  components/    # UI and feature components
+  data/          # Seed balances, recipients, transactions
+  lib/           # Formatting, FX, motion, validators
+  services/      # Simulated async helpers
+  store/         # Zustand client state
+  types/         # Shared TypeScript models
+public/
+  brand/         # Wise logos
+  icons/         # PWA icons
+  manifest.webmanifest
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Main routes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`/`, `/login`, `/signup`, `/onboarding`, `/home`, `/send`, `/convert`, `/balances/[currency]`, `/activity`, `/cards`, `/recipients`, `/payments`, `/profile`, `/help`, `/offline`
+
+## PWA
+
+Production builds register a service worker. On iPhone Safari: Share → **Add to Home Screen**. Theme color is black (`#000000`) to match the dark UI.
+
+## Notes
+
+- Balances, transfers, and card actions persist in `localStorage` under `wise-storage`.
+- Exchange rates are deterministic mock mid-market figures for a stable demo.
+- No real banking APIs or payments are connected.

@@ -1,26 +1,177 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Wise dark-mode palette (matches iOS app) */
+  --wise-green: #9fe870;
+  --wise-green-active: #b8f59a;
+  --wise-green-dim: #2a3d1a;
+  --wise-green-muted: #9fe87099;
+  --wise-forest: #163300;
+  --wise-black: #000000;
+  --wise-bg: #000000;
+  --wise-surface: #1c1c1e;
+  --wise-surface-2: #2c2c2e;
+  --wise-surface-3: #3a3a3c;
+  --wise-ink: #ffffff;
+  --wise-body: #ebebf5;
+  --wise-mute: #8e8e93;
+  --wise-mute-2: #636366;
+  --wise-pink: #ff375f;
+  --wise-yellow: #ffd60a;
+  --wise-cyan: #64d2ff;
+  --wise-orange: #ff9f0a;
+  --wise-positive: #9fe870;
+  --wise-negative: #ff453a;
+  --wise-warning: #ffd60a;
+
+  --background: var(--wise-bg);
+  --foreground: var(--wise-ink);
+  --card: var(--wise-surface);
+  --card-foreground: var(--wise-ink);
+  --primary: var(--wise-green);
+  --primary-foreground: var(--wise-forest);
+  --secondary: var(--wise-surface-2);
+  --secondary-foreground: var(--wise-green);
+  --muted: var(--wise-surface-2);
+  --muted-foreground: var(--wise-mute);
+  --accent: var(--wise-green-dim);
+  --accent-foreground: var(--wise-green);
+  --destructive: var(--wise-negative);
+  --destructive-foreground: #ffffff;
+  --border: #2c2c2e;
+  --input: #2c2c2e;
+  --ring: var(--wise-green);
+  --radius: 24px;
+  --radius-sm: 14px;
+  --radius-lg: 28px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --nav-height: 72px;
+  --header-height: 56px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-wise-green: var(--wise-green);
+  --color-wise-green-active: var(--wise-green-active);
+  --color-wise-green-dim: var(--wise-green-dim);
+  --color-wise-forest: var(--wise-forest);
+  --color-wise-ink: var(--wise-ink);
+  --color-wise-body: var(--wise-body);
+  --color-wise-mute: var(--wise-mute);
+  --color-wise-mute-2: var(--wise-mute-2);
+  --color-wise-bg: var(--wise-bg);
+  --color-wise-surface: var(--wise-surface);
+  --color-wise-surface-2: var(--wise-surface-2);
+  --color-wise-surface-3: var(--wise-surface-3);
+  --color-wise-pink: var(--wise-pink);
+  --color-wise-cyan: var(--wise-cyan);
+  --color-wise-yellow: var(--wise-yellow);
+  --color-wise-orange: var(--wise-orange);
+  --color-wise-positive: var(--wise-positive);
+  --color-wise-negative: var(--wise-negative);
+  --color-wise-warning: var(--wise-warning);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius-lg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
+html,
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100%;
+  color-scheme: dark;
+}
+
+body {
+  padding: 0;
+  margin: 0;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--wise-green);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.safe-pb {
+  padding-bottom: calc(var(--safe-bottom) + 0.5rem);
+}
+
+.safe-pt {
+  padding-top: var(--safe-top);
+}
+
+.app-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+.balance-amount {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.glass-nav {
+  background: rgba(28, 28, 30, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.account-banner {
+  background: linear-gradient(
+    120deg,
+    #5b8def 0%,
+    #7b5cff 28%,
+    #2dd4bf 58%,
+    #9fe870 100%
+  );
 }
