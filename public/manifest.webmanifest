@@ -9,9 +9,9 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/brand/niro-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/brand/niro-icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
       "purpose": "any"
     },
     {
