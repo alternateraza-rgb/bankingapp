@@ -176,7 +176,11 @@ textarea {
 }
 
 .safe-pt {
-  padding-top: var(--safe-top);
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+}
+
+.app-safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .app-scroll {

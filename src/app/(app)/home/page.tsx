@@ -46,7 +46,7 @@ export default function HomePage() {
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-full px-4 pb-8 pt-2 sm:max-w-[430px] sm:px-5">
+    <div className="mx-auto w-full min-w-0 max-w-full px-4 pb-8 pt-3 sm:max-w-[430px] sm:px-5">
       <motion.header
         initial={reduce ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}

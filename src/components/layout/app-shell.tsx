@@ -17,7 +17,7 @@ export function AppShell({ children, hideNav, className }: AppShellProps) {
         {!hideNav ? <DesktopSidebar /> : null}
         <div
           className={cn(
-            "relative mx-auto flex min-h-dvh w-full max-w-full flex-1 flex-col overflow-x-hidden bg-black sm:max-w-[430px] lg:max-w-md lg:border-x lg:border-white/5",
+            "relative mx-auto flex min-h-dvh w-full max-w-full flex-1 flex-col overflow-x-hidden bg-black app-safe-top sm:max-w-[430px] lg:max-w-md lg:border-x lg:border-white/5",
             !hideNav && "pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0",
             className
           )}
