@@ -1,40 +1,51 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, ArrowDownLeft, ArrowLeftRight, CreditCard } from "lucide-react";
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
+  ArrowLeftRight,
+  CreditCard,
+  Bitcoin,
+} from "lucide-react";
 import { MobileHeader } from "@/components/layout/mobile-header";
-import { PageTransition } from "@/lib/motion";
 
 const actions = [
   {
     href: "/send",
     title: "Send money",
-    description: "Pay people and businesses abroad",
+    description: "P2P to any Niro handle",
     icon: ArrowUpRight,
+  },
+  {
+    href: "/receive",
+    title: "Receive",
+    description: "Share your @handle",
+    icon: ArrowDownLeft,
   },
   {
     href: "/convert",
     title: "Convert",
-    description: "Move money between balances",
+    description: "Move money between wallets",
     icon: ArrowLeftRight,
   },
   {
-    href: "/balances/usd?action=add",
-    title: "Add money",
-    description: "Top up from your bank",
-    icon: ArrowDownLeft,
+    href: "/cards",
+    title: "Cards",
+    description: "Spend with a Niro virtual card",
+    icon: CreditCard,
   },
   {
-    href: "/cards",
-    title: "Card payments",
-    description: "Spend with your Wise card",
-    icon: CreditCard,
+    href: "/crypto",
+    title: "Crypto",
+    description: "Buy and sell BTC, ETH, SOL",
+    icon: Bitcoin,
   },
 ] as const;
 
 export default function PaymentsPage() {
   return (
-    <PageTransition>
+    <div className="flex flex-1 flex-col">
       <MobileHeader title="Payments" />
       <main className="flex flex-1 flex-col gap-3 px-4 pb-8">
         {actions.map(({ href, title, description, icon: Icon }) => (
@@ -55,6 +66,6 @@ export default function PaymentsPage() {
           </Link>
         ))}
       </main>
-    </PageTransition>
+    </div>
   );
 }

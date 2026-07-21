@@ -1,49 +1,69 @@
 @import "tailwindcss";
 
 :root {
-  /* Wise dark-mode palette (matches iOS app) */
-  --wise-green: #9fe870;
-  --wise-green-active: #b8f59a;
-  --wise-green-dim: #2a3d1a;
-  --wise-green-muted: #9fe87099;
-  --wise-forest: #163300;
-  --wise-black: #000000;
-  --wise-bg: #000000;
-  --wise-surface: #1c1c1e;
-  --wise-surface-2: #2c2c2e;
-  --wise-surface-3: #3a3a3c;
-  --wise-ink: #ffffff;
-  --wise-body: #ebebf5;
-  --wise-mute: #8e8e93;
-  --wise-mute-2: #636366;
-  --wise-pink: #ff375f;
-  --wise-yellow: #ffd60a;
-  --wise-cyan: #64d2ff;
-  --wise-orange: #ff9f0a;
-  --wise-positive: #9fe870;
-  --wise-negative: #ff453a;
-  --wise-warning: #ffd60a;
+  /* Niro — dark black & white fintech */
+  --niro-black: #000000;
+  --niro-bg: #000000;
+  --niro-surface: #111111;
+  --niro-surface-2: #1a1a1a;
+  --niro-surface-3: #2a2a2a;
+  --niro-ink: #ffffff;
+  --niro-body: #e8e8e8;
+  --niro-mute: #8a8a8a;
+  --niro-mute-2: #5c5c5c;
+  --niro-accent: #ffffff;
+  --niro-accent-fg: #000000;
+  --niro-positive: #34c759;
+  --niro-negative: #ff453a;
+  --niro-warning: #ffd60a;
+  --niro-pink: #ff375f;
+  --niro-cyan: #64d2ff;
+  --niro-yellow: #ffd60a;
+  --niro-orange: #ff9f0a;
 
-  --background: var(--wise-bg);
-  --foreground: var(--wise-ink);
-  --card: var(--wise-surface);
-  --card-foreground: var(--wise-ink);
-  --primary: var(--wise-green);
-  --primary-foreground: var(--wise-forest);
-  --secondary: var(--wise-surface-2);
-  --secondary-foreground: var(--wise-green);
-  --muted: var(--wise-surface-2);
-  --muted-foreground: var(--wise-mute);
-  --accent: var(--wise-green-dim);
-  --accent-foreground: var(--wise-green);
-  --destructive: var(--wise-negative);
+  /* Legacy aliases (existing class names) → Niro tokens */
+  --wise-green: var(--niro-accent);
+  --wise-green-active: #f2f2f2;
+  --wise-green-dim: #2a2a2a;
+  --wise-green-muted: #ffffff66;
+  --wise-forest: var(--niro-accent-fg);
+  --wise-black: var(--niro-black);
+  --wise-bg: var(--niro-bg);
+  --wise-surface: var(--niro-surface);
+  --wise-surface-2: var(--niro-surface-2);
+  --wise-surface-3: var(--niro-surface-3);
+  --wise-ink: var(--niro-ink);
+  --wise-body: var(--niro-body);
+  --wise-mute: var(--niro-mute);
+  --wise-mute-2: var(--niro-mute-2);
+  --wise-pink: var(--niro-pink);
+  --wise-yellow: var(--niro-yellow);
+  --wise-cyan: var(--niro-cyan);
+  --wise-orange: var(--niro-orange);
+  --wise-positive: var(--niro-positive);
+  --wise-negative: var(--niro-negative);
+  --wise-warning: var(--niro-warning);
+
+  --background: var(--niro-bg);
+  --foreground: var(--niro-ink);
+  --card: var(--niro-surface);
+  --card-foreground: var(--niro-ink);
+  --primary: var(--niro-accent);
+  --primary-foreground: var(--niro-accent-fg);
+  --secondary: var(--niro-surface-2);
+  --secondary-foreground: var(--niro-ink);
+  --muted: var(--niro-surface-2);
+  --muted-foreground: var(--niro-mute);
+  --accent: var(--niro-surface-3);
+  --accent-foreground: var(--niro-ink);
+  --destructive: var(--niro-negative);
   --destructive-foreground: #ffffff;
-  --border: #2c2c2e;
-  --input: #2c2c2e;
-  --ring: var(--wise-green);
-  --radius: 24px;
-  --radius-sm: 14px;
-  --radius-lg: 28px;
+  --border: #2a2a2a;
+  --input: #2a2a2a;
+  --ring: #ffffff;
+  --radius: 20px;
+  --radius-sm: 12px;
+  --radius-lg: 24px;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -87,7 +107,7 @@
   --color-wise-positive: var(--wise-positive);
   --color-wise-negative: var(--wise-negative);
   --color-wise-warning: var(--wise-warning);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+  --font-sans: "Geist", "SF Pro Text", -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --radius-xl: var(--radius);
   --radius-2xl: var(--radius-lg);
@@ -128,7 +148,7 @@ textarea {
 }
 
 :focus-visible {
-  outline: 2px solid var(--wise-green);
+  outline: 2px solid #ffffff;
   outline-offset: 2px;
 }
 
@@ -161,17 +181,12 @@ textarea {
 }
 
 .glass-nav {
-  background: rgba(28, 28, 30, 0.72);
+  background: rgba(17, 17, 17, 0.78);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
 .account-banner {
-  background: linear-gradient(
-    120deg,
-    #5b8def 0%,
-    #7b5cff 28%,
-    #2dd4bf 58%,
-    #9fe870 100%
-  );
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 45%, #0a0a0a 100%);
+  border: 1px solid #2a2a2a;
 }

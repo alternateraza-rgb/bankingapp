@@ -1,7 +1,7 @@
 {
-  "name": "Wise",
-  "short_name": "Wise",
-  "description": "Money without borders. Send, spend, and receive internationally.",
+  "name": "Niro",
+  "short_name": "Niro",
+  "description": "Send, spend, convert, and hold crypto — Niro fintech PWA.",
   "start_url": "/home",
   "display": "standalone",
   "background_color": "#000000",

@@ -1,132 +1,78 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  Bell,
   ChevronRight,
-  FileText,
-  HelpCircle,
-  Lock,
-  LogOut,
-  Moon,
-  Shield,
   User,
+  Shield,
+  Bell,
+  Moon,
+  LogOut,
 } from "lucide-react";
 import { MobileHeader } from "@/components/layout/mobile-header";
-import { SettingsRow } from "@/components/shared/settings-row";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { useAppStore } from "@/store/app-store";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/auth-provider";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-export default function ProfilePage() {
-  const router = useRouter();
-  const user = useAppStore((s) => s.user);
-  const signOut = useAppStore((s) => s.signOut);
-  const resetAccountData = useAppStore((s) => s.resetAccountData);
-  const [signOutOpen, setSignOutOpen] = useState(false);
+const links = [
+  { href: "/profile/personal", label: "Personal information", icon: User },
+  { href: "/profile/security", label: "Security", icon: Shield },
+  { href: "/profile/notifications", label: "Notifications", icon: Bell },
+  { href: "/profile/appearance", label: "Appearance", icon: Moon },
+] as const;
 
-  const go = (path: string) => () => router.push(path);
+export default function ProfilePage() {
+  const { profile, signOut, loading } = useAuth();
+  const router = useRouter();
+
+  const onSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Signed out");
+      router.replace("/login");
+    } catch {
+      toast.error("Could not sign out");
+    }
+  };
 
   return (
     <div className="flex flex-1 flex-col">
       <MobileHeader title="Profile" showBack backHref="/home" />
-      <main className="flex flex-1 flex-col gap-4 px-4 pb-8">
-        <div className="flex items-center gap-4 rounded-[24px] bg-wise-surface p-4">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-wise-forest text-lg font-bold text-wise-green">
-            {user.avatarInitials}
+      <main className="flex flex-1 flex-col gap-6 px-4 pb-10">
+        <div className="flex items-center gap-4 rounded-[24px] bg-wise-surface px-4 py-5">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-wise-surface-2 text-lg font-bold text-white">
+            {profile?.avatar_initials ?? "N"}
           </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-lg font-bold text-white">
-              {user.firstName} {user.lastName}
+          <div className="min-w-0">
+            <p className="truncate text-lg font-semibold text-white">
+              {loading ? "…" : profile?.full_name || "Niro user"}
             </p>
-            <p className="truncate text-sm text-wise-mute">{user.email}</p>
-            <p className="mt-1 text-xs font-semibold text-wise-forest">
-              {user.plan} plan
+            <p className="truncate text-sm text-wise-mute">
+              {profile?.handle ? `@${profile.handle}` : profile?.email}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={go("/profile/personal")}
-            className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-wise-surface-2"
-            aria-label="Edit personal info"
-          >
-            <ChevronRight className="h-5 w-5 text-wise-mute" />
-          </button>
         </div>
 
         <div className="overflow-hidden rounded-[24px] bg-wise-surface">
-          <SettingsRow
-            icon={User}
-            label="Personal information"
-            onClick={go("/profile/personal")}
-          />
-          <SettingsRow
-            icon={Moon}
-            label="Appearance"
-            onClick={go("/profile/appearance")}
-          />
-          <SettingsRow
-            icon={Bell}
-            label="Notifications"
-            onClick={go("/profile/notifications")}
-          />
-          <SettingsRow
-            icon={Shield}
-            label="Security"
-            onClick={go("/profile/security")}
-          />
-          <SettingsRow
-            icon={Lock}
-            label="Privacy"
-            onClick={go("/profile/privacy")}
-          />
+          {links.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex items-center gap-3 border-b border-white/5 px-4 py-4 last:border-0 hover:bg-wise-surface-2"
+            >
+              <Icon className="h-5 w-5 text-wise-mute" aria-hidden />
+              <span className="flex-1 font-medium text-white">{label}</span>
+              <ChevronRight className="h-4 w-4 text-wise-mute" aria-hidden />
+            </Link>
+          ))}
         </div>
 
-        <div className="overflow-hidden rounded-[24px] bg-wise-surface">
-          <SettingsRow
-            icon={HelpCircle}
-            label="Help center"
-            onClick={go("/help")}
-          />
-          <SettingsRow
-            icon={FileText}
-            label="Legal"
-            onClick={go("/profile/legal")}
-          />
-          <SettingsRow
-            icon={LogOut}
-            label="Sign out"
-            danger
-            onClick={() => setSignOutOpen(true)}
-          />
-        </div>
-
-        <button
-          type="button"
-          className="text-center text-sm font-semibold text-wise-mute underline"
-          onClick={() => {
-            resetAccountData();
-            toast.success("Account data reset");
-          }}
-        >
-          Reset account data
-        </button>
+        <Button variant="destructive" className="w-full" onClick={onSignOut}>
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </Button>
       </main>
-
-      <ConfirmationDialog
-        open={signOutOpen}
-        onOpenChange={setSignOutOpen}
-        title="Sign out?"
-        description="You can sign back in anytime."
-        confirmLabel="Sign out"
-        destructive
-        onConfirm={() => {
-          signOut();
-          setSignOutOpen(false);
-          router.replace("/login");
-        }}
-      />
     </div>
   );
 }

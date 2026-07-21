@@ -1,54 +1,70 @@
 "use client";
 
+import { useState } from "react";
 import { MobileHeader } from "@/components/layout/mobile-header";
-import { SettingsRow } from "@/components/shared/settings-row";
-import { useAppStore } from "@/store/app-store";
-import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function NotificationsPage() {
-  const notifications = useAppStore((s) => s.settings.notifications);
-  const updateSettings = useAppStore((s) => s.updateSettings);
+  const [transfers, setTransfers] = useState(true);
+  const [rates, setRates] = useState(false);
+  const [security, setSecurity] = useState(true);
+  const [marketing, setMarketing] = useState(false);
 
-  const set = (key: keyof typeof notifications, value: boolean) => {
-    updateSettings({
-      notifications: { ...notifications, [key]: value },
-    });
-    toast.success("Notification preference saved");
-  };
+  const rows = [
+    {
+      id: "transfers",
+      label: "Transfers",
+      description: "Sent, received, and failed payments",
+      checked: transfers,
+      onChange: setTransfers,
+    },
+    {
+      id: "rates",
+      label: "Rate moves",
+      description: "FX and crypto price alerts",
+      checked: rates,
+      onChange: setRates,
+    },
+    {
+      id: "security",
+      label: "Security",
+      description: "Sign-ins and card freezes",
+      checked: security,
+      onChange: setSecurity,
+    },
+    {
+      id: "marketing",
+      label: "Product updates",
+      description: "Tips and new Niro features",
+      checked: marketing,
+      onChange: setMarketing,
+    },
+  ];
 
   return (
     <div className="flex flex-1 flex-col">
       <MobileHeader title="Notifications" showBack backHref="/profile" />
-      <main className="px-4 pb-8">
-        <div className="overflow-hidden rounded-[24px] bg-wise-surface">
-          <SettingsRow
-            label="Transfers"
-            description="Updates when money is sent or received"
-            toggle
-            checked={notifications.transfers}
-            onCheckedChange={(v) => set("transfers", v)}
-          />
-          <SettingsRow
-            label="Exchange rates"
-            description="Rate alerts you subscribe to"
-            toggle
-            checked={notifications.rates}
-            onCheckedChange={(v) => set("rates", v)}
-          />
-          <SettingsRow
-            label="Security"
-            description="Sign-ins and sensitive changes"
-            toggle
-            checked={notifications.security}
-            onCheckedChange={(v) => set("security", v)}
-          />
-          <SettingsRow
-            label="Marketing"
-            description="Tips and product news"
-            toggle
-            checked={notifications.marketing}
-            onCheckedChange={(v) => set("marketing", v)}
-          />
+      <main className="flex flex-1 flex-col gap-3 px-4 pb-8">
+        <div className="rounded-[24px] bg-wise-surface p-2">
+          {rows.map((row) => (
+            <div
+              key={row.id}
+              className="flex items-center justify-between gap-3 px-3 py-3"
+            >
+              <div className="min-w-0">
+                <Label htmlFor={row.id} className="font-semibold text-white">
+                  {row.label}
+                </Label>
+                <p className="text-xs text-wise-mute">{row.description}</p>
+              </div>
+              <Switch
+                id={row.id}
+                checked={row.checked}
+                onCheckedChange={row.onChange}
+              />
+            </div>
+          ))}
         </div>
       </main>
     </div>

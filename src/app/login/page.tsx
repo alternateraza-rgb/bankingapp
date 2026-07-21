@@ -5,20 +5,18 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, useReducedMotion } from "framer-motion";
-import { WiseLogo } from "@/components/shared/wise-logo";
+import { NiroLogo } from "@/components/shared/wise-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInSchema, type SignInValues } from "@/lib/validators";
-import { useAppStore } from "@/store/app-store";
-import { simulateStep } from "@/services/api";
+import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { easeOut } from "@/lib/motion";
 
 export default function LoginPage() {
   const router = useRouter();
-  const signIn = useAppStore((s) => s.signIn);
   const [loading, setLoading] = useState(false);
   const reduce = useReducedMotion();
   const {
@@ -27,28 +25,24 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
-    defaultValues: {
-      email: "raza@wise.com",
-      password: "wise1234",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (values: SignInValues) => {
     setLoading(true);
-    await simulateStep();
-    signIn();
-    toast.success("Signed in");
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: values.email,
+      password: values.password,
+    });
     setLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Welcome back");
     router.replace("/home");
-  };
-
-  const continueAsGuest = async () => {
-    setLoading(true);
-    await simulateStep();
-    signIn();
-    toast.success("Signed in");
-    setLoading(false);
-    router.replace("/home");
+    router.refresh();
   };
 
   return (
@@ -58,13 +52,11 @@ export default function LoginPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: easeOut }}
       >
-        <WiseLogo href={null} size="lg" />
+        <NiroLogo href={null} size="lg" />
         <h1 className="mt-10 text-3xl font-bold tracking-tight text-white">
           Welcome back
         </h1>
-        <p className="mt-2 text-sm text-wise-body">
-          Sign in to your Wise account.
-        </p>
+        <p className="mt-2 text-sm text-wise-body">Sign in to your Niro account.</p>
       </motion.div>
 
       <motion.form
@@ -80,9 +72,8 @@ export default function LoginPage() {
           <Input
             id="email"
             type="email"
-            autoComplete="username"
+            autoComplete="email"
             className="mt-1.5"
-            aria-invalid={!!errors.email}
             {...register("email")}
           />
           {errors.email ? (
@@ -98,7 +89,6 @@ export default function LoginPage() {
             type="password"
             autoComplete="current-password"
             className="mt-1.5"
-            aria-invalid={!!errors.password}
             {...register("password")}
           />
           {errors.password ? (
@@ -112,33 +102,15 @@ export default function LoginPage() {
         </Button>
       </motion.form>
 
-      <motion.div
-        initial={reduce ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.25, duration: 0.35 }}
-      >
-        <Button
-          variant="secondary"
-          className="mt-3 w-full"
-          onClick={continueAsGuest}
-          disabled={loading}
-        >
-          Continue
-        </Button>
-
-        <p className="mt-6 text-center text-sm text-wise-body">
-          New here?{" "}
-          <Link
-            href="/signup"
-            className="font-semibold text-wise-forest underline"
-          >
-            Create account
-          </Link>
-        </p>
-        <p className="mt-auto pt-10 text-center text-xs text-wise-mute">
-          Money without borders
-        </p>
-      </motion.div>
+      <p className="mt-6 text-center text-sm text-wise-body">
+        New to Niro?{" "}
+        <Link href="/signup" className="font-semibold text-white underline">
+          Create account
+        </Link>
+      </p>
+      <p className="mt-auto pt-10 text-center text-xs text-wise-mute">
+        Simulated banking · Demo balances only
+      </p>
     </div>
   );
 }

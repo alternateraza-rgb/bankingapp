@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { WiseLogo } from "@/components/shared/wise-logo";
+import { NiroLogo } from "@/components/shared/wise-logo";
 import { Button } from "@/components/ui/button";
 import { easeOut } from "@/lib/motion";
 
@@ -10,53 +10,52 @@ export default function WelcomePage() {
   const reduce = useReducedMotion();
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col justify-between overflow-hidden bg-black px-5 py-10 safe-pt safe-pb">
+    <div className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col justify-between overflow-hidden bg-black px-5 py-10 safe-pt safe-pb">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-40"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% -10%, #333 0%, transparent 60%)",
+        }}
+      />
       <motion.div
         initial={reduce ? false : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: easeOut }}
+        className="relative"
       >
-        <WiseLogo href={null} size="lg" />
-        <motion.div
-          initial={reduce ? false : { opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15, duration: 0.35, ease: easeOut }}
-          className="mt-6 inline-flex rounded-full bg-wise-green px-3 py-1 text-xs font-bold text-wise-forest"
-        >
-          International money
-        </motion.div>
+        <NiroLogo href={null} size="lg" />
         <motion.h1
           initial={reduce ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4, ease: easeOut }}
-          className="mt-8 text-4xl font-bold tracking-tight text-white"
+          transition={{ delay: 0.15, duration: 0.4, ease: easeOut }}
+          className="mt-14 text-4xl font-semibold tracking-tight text-white"
         >
-          Money that moves with you
+          Banking,
+          <br />
+          beautifully simple
         </motion.h1>
         <motion.p
           initial={reduce ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4, ease: easeOut }}
-          className="mt-4 text-base leading-relaxed text-wise-body"
+          transition={{ delay: 0.28, duration: 0.4, ease: easeOut }}
+          className="mt-4 max-w-sm text-base leading-relaxed text-wise-mute"
         >
-          Hold money in multiple currencies, convert at the mid-market rate, and
-          send internationally with transparent fees.
+          Multi-currency wallets, instant P2P, virtual Visa cards, and live
+          crypto — inspired by the best of modern fintech.
         </motion.p>
       </motion.div>
       <motion.div
         initial={reduce ? false : { opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.4, ease: easeOut }}
-        className="space-y-3"
+        className="relative space-y-3"
       >
         <Button asChild className="w-full" size="lg">
-          <Link href="/onboarding">Get started</Link>
+          <Link href="/signup">Get started</Link>
         </Button>
-        <Button asChild variant="secondary" className="w-full" size="lg">
+        <Button asChild variant="outline" className="w-full" size="lg">
           <Link href="/login">Sign in</Link>
-        </Button>
-        <Button asChild variant="ghost" className="w-full">
-          <Link href="/login">Continue</Link>
         </Button>
       </motion.div>
     </div>

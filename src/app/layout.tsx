@@ -1,19 +1,26 @@
 import type { Metadata, Viewport } from "next";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
-    default: "Wise — Money that moves with you",
-    template: "%s · Wise",
+    default: "Niro — Banking, simplified",
+    template: "%s · Niro",
   },
   description:
-    "Money without borders. Send, spend, and receive internationally.",
-  applicationName: "Wise",
+    "Multi-currency accounts, instant P2P, virtual cards, and crypto — all in one dark, beautiful banking app.",
+  applicationName: "Niro",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "Wise",
+    statusBarStyle: "black-translucent",
+    title: "Niro",
   },
   formatDetection: {
     telephone: false,
@@ -42,8 +49,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased">
+    <html lang="en" className={geist.variable}>
+      <body className={`${geist.className} antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

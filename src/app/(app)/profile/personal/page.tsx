@@ -1,73 +1,43 @@
 "use client";
 
 import { MobileHeader } from "@/components/layout/mobile-header";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { useAppStore } from "@/store/app-store";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useAuth } from "@/components/auth-provider";
 
-export default function PersonalInfoPage() {
-  const user = useAppStore((s) => s.user);
-  const updateUser = useAppStore((s) => s.updateUser);
-  const [firstName, setFirstName] = useState(user.firstName);
-  const [lastName, setLastName] = useState(user.lastName);
-  const [phone, setPhone] = useState(user.phone);
+export default function PersonalProfilePage() {
+  const { profile, user, loading } = useAuth();
+
+  const rows = [
+    { label: "Full name", value: profile?.full_name },
+    { label: "Handle", value: profile?.handle ? `@${profile.handle}` : null },
+    { label: "Email", value: profile?.email ?? user?.email },
+    { label: "Primary currency", value: profile?.primary_currency },
+    { label: "User ID", value: profile?.id ?? user?.id },
+  ];
 
   return (
     <div className="flex flex-1 flex-col">
       <MobileHeader title="Personal information" showBack backHref="/profile" />
-      <main className="flex flex-1 flex-col gap-4 px-4 pb-8">
-        <div className="space-y-3 rounded-[24px] bg-wise-surface p-4">
-          <div>
-            <Label htmlFor="first">First name</Label>
-            <Input
-              id="first"
-              className="mt-1.5"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-            />
+      <main className="flex flex-1 flex-col px-4 pb-8">
+        {loading ? (
+          <p className="py-10 text-center text-sm text-wise-mute">Loading…</p>
+        ) : (
+          <div className="rounded-[24px] bg-wise-surface p-2">
+            {rows.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-start justify-between gap-3 px-3 py-3"
+              >
+                <span className="text-sm text-wise-mute">{row.label}</span>
+                <span className="max-w-[60%] break-all text-right text-sm font-semibold text-white">
+                  {row.value || "—"}
+                </span>
+              </div>
+            ))}
           </div>
-          <div>
-            <Label htmlFor="last">Last name</Label>
-            <Input
-              id="last"
-              className="mt-1.5"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" className="mt-1.5" value={user.email} readOnly />
-          </div>
-          <div>
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              className="mt-1.5"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
-        </div>
-        <p className="text-xs text-wise-mute">
-          Account plan: {user.plan}
+        )}
+        <p className="mt-4 text-center text-xs text-wise-mute">
+          Profile edits from the app UI are coming soon.
         </p>
-        <Button
-          onClick={() => {
-            updateUser({
-              firstName,
-              lastName,
-              phone,
-              avatarInitials: `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase(),
-            });
-            toast.success("Profile updated");
-          }}
-        >
-          Save changes
-        </Button>
       </main>
     </div>
   );
