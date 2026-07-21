@@ -4,6 +4,8 @@ import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export const easeOut = [0.22, 1, 0.36, 1] as const;
+export const easePremium = [0.16, 1, 0.3, 1] as const;
+export const easeSoft = [0.33, 1, 0.68, 1] as const;
 
 export function useMotionSafe() {
   const reduced = useReducedMotion();

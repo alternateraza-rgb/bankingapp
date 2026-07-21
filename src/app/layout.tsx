@@ -1,12 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Syne, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
-const geist = Geist({
+const syne = Syne({
   subsets: ["latin"],
-  variable: "--font-geist",
+  variable: "--font-niro-display",
   display: "swap",
+  weight: ["500", "600", "700", "800"],
+});
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-niro-sans",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -28,6 +36,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
+      { url: "/brand/niro-icon.svg", type: "image/svg+xml" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
@@ -49,8 +58,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={geist.variable}>
-      <body className={`${geist.className} antialiased`}>
+    <html lang="en" className={`${syne.variable} ${jakarta.variable}`}>
+      <body className={`${jakarta.className} antialiased font-sans`}>
         <Providers>{children}</Providers>
       </body>
     </html>
