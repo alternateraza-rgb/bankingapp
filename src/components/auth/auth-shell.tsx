@@ -55,7 +55,7 @@ export function AuthShell({
   className?: string;
 }) {
   return (
-    <div className="relative mx-auto flex min-h-dvh w-full max-w-[430px] flex-col overflow-hidden bg-black">
+    <div className="relative mx-auto flex min-h-dvh w-full max-w-full flex-col overflow-x-hidden bg-black sm:max-w-[430px]">
       <AuthAtmosphere />
       <div
         className={cn(

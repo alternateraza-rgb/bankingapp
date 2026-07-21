@@ -35,7 +35,7 @@ export default function SendPaymentPage() {
           </span>
         </div>
       </main>
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-white/5 bg-black/90 px-4 pt-3 backdrop-blur-md safe-pb lg:static lg:border-0 lg:bg-transparent lg:px-4 lg:pb-6">
+      <div className="fixed inset-x-0 bottom-0 z-30 w-full max-w-full border-t border-white/5 bg-black/90 px-4 pt-3 backdrop-blur-md safe-pb lg:static lg:border-0 lg:bg-transparent lg:px-4 lg:pb-6">
         <Button className="w-full" onClick={() => router.push("/send/review")}>
           Continue to review
         </Button>

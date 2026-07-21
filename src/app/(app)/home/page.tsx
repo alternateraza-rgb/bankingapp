@@ -11,6 +11,7 @@ import {
   Send,
   Bitcoin,
 } from "lucide-react";
+import { CryptoIcon } from "@/components/crypto/crypto-icon";
 import { useAuth } from "@/components/auth-provider";
 import { useNiroData } from "@/hooks/use-niro-data";
 import { useAppStore } from "@/store/app-store";
@@ -45,7 +46,7 @@ export default function HomePage() {
   const firstName = profile?.full_name?.split(" ")[0] ?? "there";
 
   return (
-    <div className="mx-auto max-w-[430px] px-5 pb-8 pt-2">
+    <div className="mx-auto w-full min-w-0 max-w-full px-4 pb-8 pt-2 sm:max-w-[430px] sm:px-5">
       <motion.header
         initial={reduce ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -188,10 +189,11 @@ export default function HomePage() {
               <Link
                 key={h.id}
                 href={`/crypto/${h.asset.toLowerCase()}`}
-                className="flex items-center justify-between rounded-[20px] bg-wise-surface px-4 py-3.5"
+                className="flex items-center gap-3 rounded-[20px] bg-wise-surface px-4 py-3.5"
               >
+                <CryptoIcon asset={h.asset} size={36} />
                 <span className="font-semibold text-white">{h.asset}</span>
-                <span className="text-sm text-wise-mute">
+                <span className="ml-auto text-sm text-wise-mute">
                   {Number(h.quantity).toFixed(6)}
                 </span>
               </Link>
