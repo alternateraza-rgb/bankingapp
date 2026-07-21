@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -13,17 +14,16 @@ interface NiroLogoProps {
   animate?: boolean;
 }
 
-const markSize = { sm: 28, md: 36, lg: 44, xl: 56 } as const;
+const markSize = { sm: 28, md: 34, lg: 44, xl: 56 } as const;
 const wordClass = {
-  sm: "text-[1.35rem]",
-  md: "text-[1.75rem]",
-  lg: "text-[2.15rem]",
-  xl: "text-[2.75rem]",
+  sm: "text-[1.4rem]",
+  md: "text-[1.7rem]",
+  lg: "text-[2.25rem]",
+  xl: "text-[2.85rem]",
 } as const;
 
-/** Faceted geometric mark — abstract folded planes, Brex energy */
 export function NiroMark({
-  size = 36,
+  size = 34,
   className,
   animate = false,
 }: {
@@ -35,40 +35,23 @@ export function NiroMark({
   const shouldAnimate = animate && !reduce;
 
   return (
-    <motion.svg
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={cn("shrink-0", className)}
+    <motion.span
+      className={cn("relative inline-flex shrink-0 overflow-hidden rounded-[22%]", className)}
+      style={{ width: size, height: size }}
+      initial={shouldAnimate ? { opacity: 0, scale: 0.88 } : false}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: easeOut }}
       aria-hidden
-      initial={shouldAnimate ? { opacity: 0, scale: 0.88, rotate: -4 } : false}
-      animate={{ opacity: 1, scale: 1, rotate: 0 }}
-      transition={{ duration: 0.55, ease: easeOut }}
     >
-      <rect width="40" height="40" rx="10" fill="#000000" />
-      <rect
-        x="0.75"
-        y="0.75"
-        width="38.5"
-        height="38.5"
-        rx="9.25"
-        stroke="white"
-        strokeOpacity="0.1"
+      <Image
+        src="/brand/niro-icon.png"
+        alt=""
+        width={size}
+        height={size}
+        className="h-full w-full object-cover"
+        priority
       />
-      {/* Faceted ribbon / crystal — not a letter */}
-      <motion.g
-        initial={shouldAnimate ? { opacity: 0, y: 3 } : false}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: easeOut, delay: 0.1 }}
-      >
-        <path fill="#ffffff" d="M14.2 7.5 L25.8 7.5 L28.5 14.2 L20 18.8 L11.5 14.2 Z" />
-        <path fill="#d8d8d8" d="M11.5 14.2 L20 18.8 L20 25.2 L11.5 29.5 Z" />
-        <path fill="#ffffff" d="M20 18.8 L28.5 14.2 L28.5 29.5 L20 25.2 Z" />
-        <path fill="#bdbdbd" d="M11.5 29.5 L20 25.2 L28.5 29.5 L20 33.2 Z" />
-      </motion.g>
-    </motion.svg>
+    </motion.span>
   );
 }
 
@@ -83,29 +66,38 @@ export function NiroLogo({
   const shouldAnimate = animate && !reduce;
   const s = markSize[size];
 
+  const wordmark = (
+    <motion.span
+      className={cn(
+        "font-display text-white leading-none",
+        wordClass[size]
+      )}
+      style={{
+        fontFamily: "var(--font-niro-display), Syne, sans-serif",
+        letterSpacing: "-0.075em",
+        fontWeight: 800,
+      }}
+      initial={shouldAnimate ? { opacity: 0, x: -6 } : false}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.45, ease: easeOut, delay: 0.12 }}
+    >
+      niro
+    </motion.span>
+  );
+
   const mark =
     variant === "icon" ? (
       <NiroMark size={s} animate={animate} className={className} />
     ) : (
-      <span className={cn("inline-flex items-center gap-3", className)}>
+      <span className={cn("inline-flex items-center gap-2.5", className)}>
         <NiroMark size={s} animate={animate} />
-        <motion.span
-          className={cn(
-            "font-display font-semibold tracking-[-0.045em] text-white leading-none",
-            wordClass[size]
-          )}
-          initial={shouldAnimate ? { opacity: 0, x: -8 } : false}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, ease: easeOut, delay: 0.2 }}
-        >
-          niro
-        </motion.span>
+        {wordmark}
       </span>
     );
 
   if (href === null) {
     return (
-      <span className="inline-flex" aria-label="Niro">
+      <span className="inline-flex items-center" aria-label="Niro">
         {mark}
       </span>
     );

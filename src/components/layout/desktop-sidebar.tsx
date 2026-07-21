@@ -31,8 +31,8 @@ export function DesktopSidebar() {
 
   return (
     <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-white/5 bg-wise-bg px-4 py-6 lg:flex">
-      <div className="mb-8 px-2">
-        <NiroLogo href="/home" />
+      <div className="mb-8 px-1">
+        <NiroLogo href="/home" size="sm" />
       </div>
       <nav aria-label="Primary" className="flex flex-1 flex-col gap-1">
         {items.map(({ href, label, icon: Icon }) => {
