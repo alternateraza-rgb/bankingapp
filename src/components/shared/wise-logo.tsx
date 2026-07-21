@@ -21,7 +21,7 @@ const wordClass = {
   xl: "text-[2.75rem]",
 } as const;
 
-/** Brex-inspired geometric mark — abstract N as continuous angled bars */
+/** Faceted geometric mark — abstract folded planes, Brex energy */
 export function NiroMark({
   size = 36,
   className,
@@ -43,21 +43,31 @@ export function NiroMark({
       xmlns="http://www.w3.org/2000/svg"
       className={cn("shrink-0", className)}
       aria-hidden
-      initial={shouldAnimate ? { opacity: 0, scale: 0.86 } : false}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={shouldAnimate ? { opacity: 0, scale: 0.88, rotate: -4 } : false}
+      animate={{ opacity: 1, scale: 1, rotate: 0 }}
       transition={{ duration: 0.55, ease: easeOut }}
     >
-      <rect width="40" height="40" rx="11" fill="white" />
-      <motion.path
-        d="M12 28.5V11.5L28 28.5V11.5"
-        stroke="black"
-        strokeWidth="3.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        initial={shouldAnimate ? { pathLength: 0, opacity: 0 } : false}
-        animate={{ pathLength: 1, opacity: 1 }}
-        transition={{ duration: 0.85, ease: easeOut, delay: 0.12 }}
+      <rect width="40" height="40" rx="10" fill="#000000" />
+      <rect
+        x="0.75"
+        y="0.75"
+        width="38.5"
+        height="38.5"
+        rx="9.25"
+        stroke="white"
+        strokeOpacity="0.1"
       />
+      {/* Faceted ribbon / crystal — not a letter */}
+      <motion.g
+        initial={shouldAnimate ? { opacity: 0, y: 3 } : false}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: easeOut, delay: 0.1 }}
+      >
+        <path fill="#ffffff" d="M14.2 7.5 L25.8 7.5 L28.5 14.2 L20 18.8 L11.5 14.2 Z" />
+        <path fill="#d8d8d8" d="M11.5 14.2 L20 18.8 L20 25.2 L11.5 29.5 Z" />
+        <path fill="#ffffff" d="M20 18.8 L28.5 14.2 L28.5 29.5 L20 25.2 Z" />
+        <path fill="#bdbdbd" d="M11.5 29.5 L20 25.2 L28.5 29.5 L20 33.2 Z" />
+      </motion.g>
     </motion.svg>
   );
 }
@@ -81,7 +91,7 @@ export function NiroLogo({
         <NiroMark size={s} animate={animate} />
         <motion.span
           className={cn(
-            "font-display font-semibold tracking-[-0.04em] text-white leading-none",
+            "font-display font-semibold tracking-[-0.045em] text-white leading-none",
             wordClass[size]
           )}
           initial={shouldAnimate ? { opacity: 0, x: -8 } : false}
