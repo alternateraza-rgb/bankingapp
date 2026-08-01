@@ -183,7 +183,12 @@ export const INITIAL_CARD: Card = {
   onlinePayments: true,
   contactless: true,
   foreignTransactions: true,
+  nickname: "Everyday",
+  color: "#163300",
+  isCustom: false,
 };
+
+export const INITIAL_CARDS: Card[] = [INITIAL_CARD];
 
 export const INITIAL_SECURITY: SecuritySetting = {
   passcodeEnabled: true,

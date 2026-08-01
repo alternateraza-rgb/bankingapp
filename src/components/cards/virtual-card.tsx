@@ -41,9 +41,11 @@ export function VirtualCard({
         whileHover={reduce ? undefined : { y: -4 }}
         className={cn(
           "relative overflow-hidden rounded-[24px] p-5 text-white shadow-lg shadow-black/20",
-          "bg-gradient-to-br from-[#163300] via-[#1f4a00] to-[#0e0f0c]",
           card.frozen && "opacity-70"
         )}
+        style={{
+          background: `linear-gradient(145deg, ${card.color || "#163300"} 0%, #0e0f0c 100%)`,
+        }}
       >
         <motion.div
           className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-wise-green/20"
@@ -54,11 +56,18 @@ export function VirtualCard({
         <div className="relative flex items-start justify-between">
           <div>
             <p className="text-xs font-medium text-white/70">Wise · Virtual debit</p>
-            <p className="mt-1 text-sm font-semibold text-wise-green">Virtual card</p>
+            <p className="mt-1 text-sm font-semibold text-wise-green">
+              {card.nickname?.trim() || (card.isCustom ? "Custom card" : "Virtual card")}
+            </p>
           </div>
-          {/* Visa wordmark approximation */}
           <span className="text-xl font-black italic tracking-tight text-white">
-            VISA
+            {card.network === "mastercard"
+              ? "MC"
+              : card.network === "amex"
+                ? "AMEX"
+                : card.network === "discover"
+                  ? "DISC"
+                  : "VISA"}
           </span>
         </div>
         <p className="balance-amount relative mt-10 text-xl font-semibold tracking-[0.18em]">

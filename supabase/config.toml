@@ -1,0 +1,7 @@
+# Minimal Supabase project config for Wise migrations.
+# Link with: supabase link --project-ref <your-ref>
+
+project_id = "wise-bankingapp"
+
+[db]
+major_version = 15

@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { signUpSchema, type SignUpValues } from "@/lib/validators";
 import { useAppStore } from "@/store/app-store";
 import { simulateStep } from "@/services/api";
+import { ensureSupabaseSession, isSupabaseConfigured } from "@/services/wise-cloud";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -28,16 +29,33 @@ export default function SignupPage() {
 
   const onSubmit = async (values: SignUpValues) => {
     setLoading(true);
-    await simulateStep();
-    updateUser({
-      firstName: values.firstName,
-      lastName: values.lastName,
-      email: values.email,
-      avatarInitials: `${values.firstName[0]}${values.lastName[0]}`.toUpperCase(),
-    });
-    toast.success("Account created — verify your email");
-    setLoading(false);
-    router.push("/onboarding?step=verify");
+    try {
+      await simulateStep();
+      if (isSupabaseConfigured()) {
+        const session = await ensureSupabaseSession({
+          email: values.email,
+          password: values.password,
+          fullName: `${values.firstName} ${values.lastName}`,
+        });
+        if (!session.ok && session.reason === "confirm_email") {
+          toast.message("Confirm your email", {
+            description: "Then sign in to sync cards and transactions.",
+          });
+        } else if (!session.ok) {
+          toast.error(session.message ?? "Could not create cloud account");
+        }
+      }
+      updateUser({
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        avatarInitials: `${values.firstName[0]}${values.lastName[0]}`.toUpperCase(),
+      });
+      toast.success("Account created — verify your email");
+      router.push("/onboarding?step=verify");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

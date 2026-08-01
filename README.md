@@ -8,7 +8,8 @@ A mobile-first personal finance PWA inspired by the Wise dark-mode iOS experienc
 
 - Next.js 15 (App Router) + TypeScript (strict)
 - Tailwind CSS v4
-- Zustand + localStorage
+- Zustand + localStorage (UI state)
+- Supabase (cards + transactions persistence)
 - React Hook Form + Zod
 - Framer Motion, Recharts, Lucide React
 - `@ducanh2912/next-pwa`
@@ -17,10 +18,16 @@ A mobile-first personal finance PWA inspired by the Wise dark-mode iOS experienc
 
 ```bash
 npm install
+cp .env.example .env.local   # add Supabase URL + anon key
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+### Supabase schema
+
+Run `supabase/migrations/20260801120039_wise_cards_transactions.sql` in the SQL Editor.  
+See `APPLY_MIGRATION.md` for env var names and Auth settings.
 
 ### Sign in
 
@@ -29,7 +36,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | Email | `raza@wise.com` |
 | Password | `wise1234` |
 
-Or tap **Continue** on the login screen.
+Or tap **Continue** on the login screen (uses Anonymous auth if enabled).
 
 ## Scripts
 

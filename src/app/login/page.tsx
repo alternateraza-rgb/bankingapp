@@ -12,6 +12,12 @@ import { Label } from "@/components/ui/label";
 import { signInSchema, type SignInValues } from "@/lib/validators";
 import { useAppStore } from "@/store/app-store";
 import { simulateStep } from "@/services/api";
+import {
+  ensureSupabaseSession,
+  fetchCloudCards,
+  fetchCloudTransactions,
+  isSupabaseConfigured,
+} from "@/services/wise-cloud";
 import { toast } from "sonner";
 import { useState } from "react";
 import { easeOut } from "@/lib/motion";
@@ -19,6 +25,7 @@ import { easeOut } from "@/lib/motion";
 export default function LoginPage() {
   const router = useRouter();
   const signIn = useAppStore((s) => s.signIn);
+  const mergeCloudData = useAppStore((s) => s.mergeCloudData);
   const [loading, setLoading] = useState(false);
   const reduce = useReducedMotion();
   const {
@@ -33,22 +40,64 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = async () => {
-    setLoading(true);
-    await simulateStep();
+  const finishSignIn = async () => {
+    if (isSupabaseConfigured()) {
+      try {
+        const [cards, transactions] = await Promise.all([
+          fetchCloudCards(),
+          fetchCloudTransactions(),
+        ]);
+        mergeCloudData({ cards, transactions });
+      } catch (e) {
+        console.warn("Cloud sync on login failed", e);
+      }
+    }
     signIn();
     toast.success("Signed in");
-    setLoading(false);
     router.replace("/home");
+  };
+
+  const onSubmit = async (values: SignInValues) => {
+    setLoading(true);
+    try {
+      await simulateStep();
+      if (isSupabaseConfigured()) {
+        const session = await ensureSupabaseSession({
+          email: values.email,
+          password: values.password,
+        });
+        if (!session.ok) {
+          toast.error(
+            session.message ??
+              "Cloud sign-in failed. Check Supabase Auth / confirm email."
+          );
+          // Still allow local demo sign-in
+        }
+      }
+      await finishSignIn();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const continueAsGuest = async () => {
     setLoading(true);
-    await simulateStep();
-    signIn();
-    toast.success("Signed in");
-    setLoading(false);
-    router.replace("/home");
+    try {
+      await simulateStep();
+      if (isSupabaseConfigured()) {
+        const session = await ensureSupabaseSession();
+        if (!session.ok) {
+          toast.message("Continuing offline", {
+            description:
+              session.message ??
+              "Enable Anonymous sign-ins or create a user in Supabase.",
+          });
+        }
+      }
+      await finishSignIn();
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

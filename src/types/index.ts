@@ -6,7 +6,11 @@ export type TransactionType =
   | "card"
   | "deposit"
   | "withdrawal"
-  | "fee";
+  | "fee"
+  | "custom"
+  | "purchase"
+  | "income"
+  | "refund";
 
 export type TransactionStatus =
   | "completed"
@@ -72,6 +76,10 @@ export interface Transaction {
   date: string;
   merchantOrRecipient: string;
   icon?: string;
+  vendorName?: string;
+  vendorLogoUrl?: string;
+  cardId?: string;
+  isCustom?: boolean;
 }
 
 export interface TransferDraft {
@@ -117,13 +125,16 @@ export interface Card {
   fullNumber: string;
   expiry: string;
   cvv: string;
-  network: "visa" | "mastercard";
+  network: "visa" | "mastercard" | "amex" | "discover";
   frozen: boolean;
   spendingLimit: number;
   spendingUsed: number;
   onlinePayments: boolean;
   contactless: boolean;
   foreignTransactions: boolean;
+  nickname?: string;
+  color?: string;
+  isCustom?: boolean;
 }
 
 export interface SecuritySetting {
