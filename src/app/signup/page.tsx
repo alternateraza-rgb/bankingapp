@@ -15,6 +15,10 @@ import {
   profileFromAuthUser,
   signUpWithEmail,
 } from "@/services/auth";
+import {
+  fetchCloudCards,
+  fetchCloudTransactions,
+} from "@/services/wise-cloud";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -22,6 +26,7 @@ export default function SignupPage() {
   const router = useRouter();
   const establishSession = useAppStore((s) => s.establishSession);
   const syncBalancesFromCloud = useAppStore((s) => s.syncBalancesFromCloud);
+  const replaceCloudData = useAppStore((s) => s.replaceCloudData);
   const [loading, setLoading] = useState(false);
   const configured = isSupabaseConfigured();
   const {
@@ -70,7 +75,13 @@ export default function SignupPage() {
         },
       });
       try {
+        // ensure_starting_balance seeds $5500 + month of activity in SQL
         await syncBalancesFromCloud();
+        const [cards, transactions] = await Promise.all([
+          fetchCloudCards(),
+          fetchCloudTransactions(),
+        ]);
+        replaceCloudData({ cards, transactions });
       } catch (e) {
         console.warn("Balance bootstrap failed", e);
       }

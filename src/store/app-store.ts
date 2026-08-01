@@ -21,7 +21,6 @@ import {
   INITIAL_BALANCES,
   INITIAL_SECURITY,
 } from "@/data/user";
-import { buildStarterTransactions } from "@/data/transactions";
 import {
   calculateFee,
   convertAmount,
@@ -311,7 +310,9 @@ export const useAppStore = create<AppState>()(
               `${(profile.firstName ?? "U")[0]}${(profile.lastName ?? "")[0] || ""}`.toUpperCase(),
           };
 
-          // New / switched account: $5500 + realistic starter activity
+          // New / switched account: local placeholder only.
+          // Starter activity comes from Supabase SQL seed (ensure_starting_balance /
+          // handle_new_user) via cloud sync — not local fake transactions.
           if (switchingUser || !prevId) {
             const holder = `${nextUser.firstName} ${nextUser.lastName}`.trim();
             return {
@@ -328,7 +329,7 @@ export const useAppStore = create<AppState>()(
                 ...emptyCardPlaceholder,
                 cardholderName: holder,
               },
-              transactions: buildStarterTransactions(),
+              transactions: [],
               recipients: [],
               balances: INITIAL_BALANCES.map((b) => ({
                 ...b,

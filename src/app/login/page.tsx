@@ -72,7 +72,7 @@ export default function LoginPage() {
         ]);
         replaceCloudData({
           cards,
-          ...(transactions.length > 0 ? { transactions } : {}),
+          transactions,
         });
       } catch (e) {
         console.warn("Initial cloud sync failed", e);

@@ -34,9 +34,10 @@ async function syncCloudData(cancelled: () => boolean) {
       fetchCloudTransactions(),
     ]);
     if (cancelled()) return;
+    // Ledger from Supabase is source of truth (SQL seed + custom txns)
     replaceCloudData({
       cards,
-      ...(transactions.length > 0 ? { transactions } : {}),
+      transactions,
     });
   } catch (e) {
     console.warn("Cloud sync failed", e);
