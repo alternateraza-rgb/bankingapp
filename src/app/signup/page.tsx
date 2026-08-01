@@ -21,6 +21,7 @@ import { useState } from "react";
 export default function SignupPage() {
   const router = useRouter();
   const establishSession = useAppStore((s) => s.establishSession);
+  const syncBalancesFromCloud = useAppStore((s) => s.syncBalancesFromCloud);
   const [loading, setLoading] = useState(false);
   const configured = isSupabaseConfigured();
   const {
@@ -68,6 +69,11 @@ export default function SignupPage() {
           avatarInitials: `${values.firstName[0]}${values.lastName[0]}`.toUpperCase(),
         },
       });
+      try {
+        await syncBalancesFromCloud();
+      } catch (e) {
+        console.warn("Balance bootstrap failed", e);
+      }
       toast.success("Account created");
       router.replace("/home");
     } finally {

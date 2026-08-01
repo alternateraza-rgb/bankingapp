@@ -33,13 +33,16 @@ import {
   createCustomCardCloud,
   createCustomTransactionCloud,
   createRandomCardCloud,
+  ensureAndFetchBalances,
   fetchWalletBalances,
   isSupabaseConfigured,
   persistTransactionCloud,
   setCardFrozenCloud,
   signOutSupabase,
+  topUpWalletCloud,
   updateCardCloud,
 } from "@/services/wise-cloud";
+import { STARTING_BALANCE_USD } from "@/data/user";
 
 interface AppState {
   user: User;
@@ -122,6 +125,12 @@ interface AppState {
     cards?: Card[];
     transactions?: Transaction[];
   }) => void;
+  /** Apply live Supabase wallet balances onto local UI balances. */
+  applyWalletBalances: (
+    walletBalances: Partial<Record<CurrencyCode, number>>
+  ) => void;
+  /** Ensure $5500 opening balance in Supabase, then sync UI from wallets. */
+  syncBalancesFromCloud: () => Promise<void>;
   /** @deprecated use replaceCloudData */
   mergeCloudData: (input: {
     cards?: Card[];
@@ -510,7 +519,19 @@ export const useAppStore = create<AppState>()(
           balances: adjustBalance(s.balances, currency, amount),
           transactions: [transaction, ...s.transactions],
         }));
-        queuePersist(transaction);
+
+        // Prefer Niro topup_wallet so Supabase balance matches UI
+        if (isSupabaseConfigured()) {
+          void topUpWalletCloud(currency, amount)
+            .then(async () => {
+              const wallets = await fetchWalletBalances();
+              get().applyWalletBalances(wallets);
+            })
+            .catch((err) => {
+              console.warn("topup_wallet failed, falling back to ledger sync", err);
+              queuePersist(transaction);
+            });
+        }
       },
 
       createRandomCard: async (input) => {
@@ -649,18 +670,8 @@ export const useAppStore = create<AppState>()(
             ],
           }));
 
-          // Prefer live wallet balances from Supabase when available
           try {
-            const walletBalances = await fetchWalletBalances();
-            if (Object.keys(walletBalances).length > 0) {
-              set((s) => ({
-                balances: s.balances.map((b) =>
-                  walletBalances[b.currency] !== undefined
-                    ? { ...b, amount: walletBalances[b.currency] as number }
-                    : b
-                ),
-              }));
-            }
+            await get().syncBalancesFromCloud();
           } catch {
             // local balance already updated
           }
@@ -698,6 +709,23 @@ export const useAppStore = create<AppState>()(
                   },
           };
         });
+      },
+
+      applyWalletBalances: (walletBalances) => {
+        if (!walletBalances || Object.keys(walletBalances).length === 0) return;
+        set((s) => ({
+          balances: s.balances.map((b) =>
+            walletBalances[b.currency] !== undefined
+              ? { ...b, amount: Number(walletBalances[b.currency]) }
+              : b
+          ),
+        }));
+      },
+
+      syncBalancesFromCloud: async () => {
+        if (!isSupabaseConfigured() || !get().authUserId) return;
+        const wallets = await ensureAndFetchBalances(STARTING_BALANCE_USD);
+        get().applyWalletBalances(wallets);
       },
 
       mergeCloudData: ({ cards, transactions }) => {

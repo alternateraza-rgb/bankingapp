@@ -33,6 +33,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const authUserId = useAppStore((s) => s.authUserId);
   const establishSession = useAppStore((s) => s.establishSession);
   const replaceCloudData = useAppStore((s) => s.replaceCloudData);
+  const syncBalancesFromCloud = useAppStore((s) => s.syncBalancesFromCloud);
   const signOut = useAppStore((s) => s.signOut);
   const router = useRouter();
   const pathname = usePathname();
@@ -74,6 +75,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       establishSession({ userId: user.id, profile });
 
       try {
+        await syncBalancesFromCloud();
         const [cards, transactions] = await Promise.all([
           fetchCloudCards(),
           fetchCloudTransactions(),
@@ -117,6 +119,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         const profile = profileFromAuthUser(session.user);
         establishSession({ userId: session.user.id, profile });
         try {
+          await syncBalancesFromCloud();
           const [cards, transactions] = await Promise.all([
             fetchCloudCards(),
             fetchCloudTransactions(),
@@ -139,6 +142,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     hydrated,
     establishSession,
     replaceCloudData,
+    syncBalancesFromCloud,
     setSessionChecked,
     signOut,
   ]);

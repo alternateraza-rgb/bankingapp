@@ -28,6 +28,7 @@ export default function LoginPage() {
   const router = useRouter();
   const establishSession = useAppStore((s) => s.establishSession);
   const replaceCloudData = useAppStore((s) => s.replaceCloudData);
+  const syncBalancesFromCloud = useAppStore((s) => s.syncBalancesFromCloud);
   const [loading, setLoading] = useState(false);
   const reduce = useReducedMotion();
   const configured = isSupabaseConfigured();
@@ -63,11 +64,12 @@ export default function LoginPage() {
       });
 
       try {
+        // Supabase wallets are source of truth ($5500 starter via ensure_starting_balance)
+        await syncBalancesFromCloud();
         const [cards, transactions] = await Promise.all([
           fetchCloudCards(),
           fetchCloudTransactions(),
         ]);
-        // Keep local starter history when cloud has nothing useful yet
         replaceCloudData({
           cards,
           ...(transactions.length > 0 ? { transactions } : {}),
@@ -75,7 +77,7 @@ export default function LoginPage() {
       } catch (e) {
         console.warn("Initial cloud sync failed", e);
         toast.message("Signed in", {
-          description: "Could not load cloud data yet — pull to refresh in Activity.",
+          description: "Could not load cloud balances yet — refresh Home.",
         });
       }
 

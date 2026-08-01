@@ -570,6 +570,37 @@ export async function fetchWalletBalances(): Promise<
   return out;
 }
 
+/**
+ * Ensure Supabase USD wallet has the $5500 opening balance (once),
+ * then return live wallet balances. This is the source of truth for money RPCs.
+ */
+export async function ensureAndFetchBalances(
+  amount = 5500
+): Promise<Partial<Record<CurrencyCode, number>>> {
+  const { supabase } = await requireAuthedClient();
+
+  const { error } = await supabase.rpc("ensure_starting_balance", {
+    p_amount: amount,
+  });
+  if (error) {
+    // Fallback: if RPC not installed yet, try to read wallets anyway
+    console.warn("ensure_starting_balance failed", error.message);
+  }
+
+  return fetchWalletBalances();
+}
+
+/** Top up via Niro RPC when available; keeps Supabase wallet in sync with UI. */
+export async function topUpWalletCloud(currency: string, amount: number) {
+  const { supabase } = await requireAuthedClient();
+  const { data, error } = await supabase.rpc("topup_wallet", {
+    p_currency: currency,
+    p_amount: amount,
+  });
+  if (error) throw new Error(error.message);
+  return data as { balance?: number; currency?: string } | null;
+}
+
 export async function uploadVendorLogo(file: File): Promise<string | null> {
   const { supabase, userId } = await requireAuthedClient();
   const ext = file.name.split(".").pop()?.toLowerCase() || "png";

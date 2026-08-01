@@ -41,10 +41,11 @@ Do **not** use `NEXT_SUPABASE_PUBLIC_*` — those are not exposed to the Next.js
 - **Activity → Add custom transaction**: vendor, amount, logo URL/upload → stored in Supabase
 - Transfers, conversions, and add-money also sync via `upsert_transaction`
 
-## Starting balance ($5500)
+## Starting balance ($5500) + sync
 
-Also run (after core):
+Run these (after core + custom-txn RPC):
 
-`supabase/migrations/20260801122708_niro_starting_balance_5500.sql`
+1. `supabase/migrations/20260801122708_niro_starting_balance_5500.sql`
+2. `supabase/migrations/20260801124749_ensure_starting_balance_sync.sql` ← **required** so UI and Supabase wallets stay aligned
 
-This replaces the old $1000 “Welcome bonus / demo funds to explore Niro” grant with **$5500 USD**, seeds ~1 month of realistic Apple/Starbucks/Alipay/etc. activity, and updates existing USD wallets to 5500.
+`ensure_starting_balance()` is called on every login. Supabase wallet balance is the source of truth for money RPCs (fixes “insufficient funds” when the UI still shows $5500).
