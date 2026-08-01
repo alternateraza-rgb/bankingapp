@@ -164,8 +164,22 @@ export default function ActivityPage() {
       toast.success("Transaction added");
       setSheetOpen(false);
       resetForm();
+      // Pull latest from Supabase so Home/Activity stay in sync
+      try {
+        if (isSupabaseConfigured()) {
+          const cloud = await fetchCloudTransactions();
+          if (cloud.length > 0) {
+            mergeCloudData({ transactions: cloud });
+          }
+        }
+      } catch {
+        // local row already visible
+      }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not add transaction");
+      // Optimistic row is still in the feed; warn about cloud
+      toast.error(e instanceof Error ? e.message : "Could not sync transaction");
+      setSheetOpen(false);
+      resetForm();
     } finally {
       setBusy(false);
     }

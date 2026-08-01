@@ -405,6 +405,13 @@ export async function persistTransactionCloud(txn: Transaction) {
   return upsert.data ? mapTxn(upsert.data as DbTxn) : null;
 }
 
+function coerceRpcRow<T>(data: unknown): T | null {
+  if (!data) return null;
+  if (Array.isArray(data)) return (data[0] as T) ?? null;
+  if (typeof data === "object") return data as T;
+  return null;
+}
+
 export async function createCustomTransactionCloud(input: {
   amount: number;
   currency: string;
@@ -415,32 +422,152 @@ export async function createCustomTransactionCloud(input: {
   subtitle?: string;
   type?: string;
   cardId?: string;
-}) {
-  const { supabase } = await requireAuthedClient();
-  const { data, error } = await supabase.rpc("create_custom_transaction", {
-    p_amount: input.amount,
+}): Promise<Transaction> {
+  const { supabase, userId } = await requireAuthedClient();
+  const cardId =
+    input.cardId &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      input.cardId
+    )
+      ? input.cardId
+      : null;
+
+  const signed =
+    input.direction === "debit"
+      ? -Math.abs(input.amount)
+      : Math.abs(input.amount);
+  const title = input.title?.trim() || input.vendorName;
+  const subtitle =
+    input.subtitle?.trim() ||
+    (input.direction === "debit" ? "Custom purchase" : "Custom credit");
+
+  // 1) Preferred: Niro/Wise RPC
+  const rpc = await supabase.rpc("create_custom_transaction", {
+    p_amount: Math.abs(input.amount),
     p_currency: input.currency,
     p_vendor_name: input.vendorName,
     p_direction: input.direction,
-    p_vendor_logo_url: input.vendorLogoUrl ?? null,
-    p_title: input.title ?? null,
-    p_subtitle: input.subtitle ?? null,
     p_type: input.type ?? "custom",
+    p_vendor_logo_url: input.vendorLogoUrl ?? null,
+    p_title: title,
+    p_subtitle: subtitle,
+    p_status: "completed",
     p_affect_balance: true,
-    p_card_id:
-      input.cardId &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-        input.cardId
-      )
-        ? input.cardId
-        : null,
+    p_card_id: cardId,
   });
-  if (error) throw new Error(error.message);
-  // Niro returns ledger_entries; Wise returns transactions — both map
-  if (data && "created_at" in (data as object) && !("occurred_at" in (data as object))) {
-    return mapLedger(data as DbLedger);
+
+  if (!rpc.error && rpc.data) {
+    const row = coerceRpcRow<DbLedger & DbTxn>(rpc.data);
+    if (row) {
+      if ("occurred_at" in row && row.occurred_at) return mapTxn(row as DbTxn);
+      return mapLedger(row as DbLedger);
+    }
   }
-  return data ? mapTxn(data as DbTxn) : null;
+
+  // 2) Fallback: direct ledger_entries insert + wallet update (needs INSERT policy or will fail)
+  const walletId = await getPrimaryWalletId(input.currency).catch(() => null);
+  if (walletId) {
+    if (input.direction === "debit") {
+      const { data: wallet } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("id", walletId)
+        .single();
+      const balance = Number(wallet?.balance ?? 0);
+      if (balance < Math.abs(input.amount)) {
+        throw new Error("Insufficient funds");
+      }
+      const { error: wErr } = await supabase
+        .from("wallets")
+        .update({ balance: balance - Math.abs(input.amount) })
+        .eq("id", walletId);
+      if (wErr) {
+        // RLS blocked wallet write — continue to try ledger insert via service path below
+        console.warn("Wallet update blocked", wErr.message);
+      }
+    } else {
+      const { data: wallet } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("id", walletId)
+        .single();
+      const balance = Number(wallet?.balance ?? 0);
+      await supabase
+        .from("wallets")
+        .update({ balance: balance + Math.abs(input.amount) })
+        .eq("id", walletId);
+    }
+
+    const { data: entry, error: ledgerErr } = await supabase
+      .from("ledger_entries")
+      .insert({
+        user_id: userId,
+        wallet_id: walletId,
+        card_id: cardId,
+        type: input.type ?? "custom",
+        status: "completed",
+        amount: signed,
+        currency: input.currency.toUpperCase(),
+        title,
+        subtitle,
+        vendor_name: input.vendorName,
+        vendor_logo_url: input.vendorLogoUrl ?? null,
+        meta: {
+          custom: true,
+          direction: input.direction,
+          affect_balance: true,
+        },
+      })
+      .select("*")
+      .single();
+
+    if (!ledgerErr && entry) return mapLedger(entry as DbLedger);
+  }
+
+  // 3) Wise transactions table fallback
+  const { data: txn, error: txnErr } = await supabase
+    .from("transactions")
+    .insert({
+      user_id: userId,
+      type: input.type ?? "custom",
+      status: "completed",
+      title,
+      subtitle,
+      amount: signed,
+      currency: input.currency.toUpperCase(),
+      fee: 0,
+      fee_currency: input.currency.toUpperCase(),
+      reference: `CTX-${Date.now().toString(36).toUpperCase()}`,
+      merchant_or_recipient: input.vendorName,
+      vendor_name: input.vendorName,
+      vendor_logo_url: input.vendorLogoUrl ?? null,
+      icon: input.vendorLogoUrl ?? null,
+      is_custom: true,
+      card_id: cardId,
+      occurred_at: new Date().toISOString(),
+    })
+    .select("*")
+    .single();
+
+  if (!txnErr && txn) return mapTxn(txn as DbTxn);
+
+  const detail =
+    rpc.error?.message ||
+    txnErr?.message ||
+    "create_custom_transaction RPC missing — run the cards/custom-txn SQL migration";
+  throw new Error(detail);
+}
+
+/** Pull USD (and other) wallet balances from Supabase into UI shape. */
+export async function fetchWalletBalances(): Promise<
+  Partial<Record<CurrencyCode, number>>
+> {
+  const wallets = await fetchCloudWallets();
+  const out: Partial<Record<CurrencyCode, number>> = {};
+  for (const w of wallets as Array<{ currency: string; balance: number }>) {
+    out[w.currency as CurrencyCode] = Number(w.balance);
+  }
+  return out;
 }
 
 export async function uploadVendorLogo(file: File): Promise<string | null> {

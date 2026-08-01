@@ -33,6 +33,7 @@ import {
   createCustomCardCloud,
   createCustomTransactionCloud,
   createRandomCardCloud,
+  fetchWalletBalances,
   isSupabaseConfigured,
   persistTransactionCloud,
   setCardFrozenCloud,
@@ -568,41 +569,48 @@ export const useAppStore = create<AppState>()(
         if (!get().authUserId) {
           throw new Error("Sign in required");
         }
-        if (!isSupabaseConfigured()) {
-          throw new Error("Supabase is not configured");
-        }
         const direction = input.direction ?? "debit";
         const affectBalance = input.affectBalance ?? true;
+        const signed =
+          direction === "debit"
+            ? -Math.abs(input.amount)
+            : Math.abs(input.amount);
 
-        const transaction = await createCustomTransactionCloud({
-          amount: Math.abs(input.amount),
-          currency: input.currency,
-          vendorName: input.vendorName,
-          direction,
-          vendorLogoUrl: input.vendorLogoUrl,
-          title: input.title,
-          subtitle: input.subtitle,
+        // Optimistic local row so the UI updates immediately
+        const optimistic: Transaction = {
+          id: generateId("txn"),
           type: input.type ?? "custom",
+          status: "completed",
+          title: input.title?.trim() || input.vendorName,
+          subtitle:
+            input.subtitle?.trim() ||
+            (direction === "debit" ? "Custom purchase" : "Custom credit"),
+          amount: signed,
+          currency: input.currency,
+          fee: 0,
+          feeCurrency: input.currency,
+          reference: generateReference(),
+          date: new Date().toISOString(),
+          merchantOrRecipient: input.vendorName,
+          vendorName: input.vendorName,
+          vendorLogoUrl: input.vendorLogoUrl,
+          icon: input.vendorLogoUrl,
           cardId: input.cardId,
-        });
-        if (!transaction) throw new Error("Could not create transaction");
+          isCustom: true,
+        };
 
         set((s) => {
           let balances = s.balances;
           let cards = s.cards;
           if (affectBalance) {
-            balances = adjustBalance(balances, input.currency, transaction.amount);
+            balances = adjustBalance(balances, input.currency, signed);
           }
-          if (
-            input.cardId &&
-            direction === "debit" &&
-            transaction.status === "completed"
-          ) {
+          if (input.cardId && direction === "debit") {
             cards = cards.map((c) =>
               c.id === input.cardId
                 ? {
                     ...c,
-                    spendingUsed: c.spendingUsed + Math.abs(transaction.amount),
+                    spendingUsed: c.spendingUsed + Math.abs(signed),
                   }
                 : c
             );
@@ -611,14 +619,62 @@ export const useAppStore = create<AppState>()(
             balances,
             cards,
             card: withActiveCard(cards, s.activeCardId),
-            transactions: [
-              transaction,
-              ...s.transactions.filter((t) => t.id !== transaction.id),
-            ],
+            transactions: [optimistic, ...s.transactions],
           };
         });
 
-        return transaction;
+        if (!isSupabaseConfigured()) {
+          return optimistic;
+        }
+
+        try {
+          const transaction = await createCustomTransactionCloud({
+            amount: Math.abs(input.amount),
+            currency: input.currency,
+            vendorName: input.vendorName,
+            direction,
+            vendorLogoUrl: input.vendorLogoUrl,
+            title: input.title,
+            subtitle: input.subtitle,
+            type: input.type ?? "custom",
+            cardId: input.cardId,
+          });
+
+          set((s) => ({
+            transactions: [
+              transaction,
+              ...s.transactions.filter(
+                (t) => t.id !== optimistic.id && t.id !== transaction.id
+              ),
+            ],
+          }));
+
+          // Prefer live wallet balances from Supabase when available
+          try {
+            const walletBalances = await fetchWalletBalances();
+            if (Object.keys(walletBalances).length > 0) {
+              set((s) => ({
+                balances: s.balances.map((b) =>
+                  walletBalances[b.currency] !== undefined
+                    ? { ...b, amount: walletBalances[b.currency] as number }
+                    : b
+                ),
+              }));
+            }
+          } catch {
+            // local balance already updated
+          }
+
+          return transaction;
+        } catch (err) {
+          // Keep optimistic row so Activity/Home still update
+          console.error("Custom transaction cloud sync failed", err);
+          const message =
+            err instanceof Error ? err.message : "Cloud sync failed";
+          throw new Error(
+            `${message}. Shown in your feed — to persist in Supabase, ensure create_custom_transaction is installed.`
+          );
+        }
       },
 
       replaceCloudData: ({ cards, transactions }) => {
