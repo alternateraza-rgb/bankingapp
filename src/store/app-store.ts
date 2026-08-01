@@ -689,9 +689,21 @@ export const useAppStore = create<AppState>()(
           console.error("Custom transaction cloud sync failed", err);
           const message =
             err instanceof Error ? err.message : "Cloud sync failed";
-          throw new Error(
-            `${message}. Shown in your feed — to persist in Supabase, ensure create_custom_transaction is installed.`
-          );
+          const lower = message.toLowerCase();
+          if (lower.includes("insufficient funds")) {
+            throw new Error(
+              "Insufficient funds in Supabase wallet (UI may be out of sync). Run the wallet repair SQL, then sign out/in. Shown in your feed locally."
+            );
+          }
+          if (
+            lower.includes("could not find the function") ||
+            lower.includes("create_custom_transaction")
+          ) {
+            throw new Error(
+              `${message}. Shown in your feed — install create_custom_transaction in Supabase.`
+            );
+          }
+          throw new Error(`${message}. Shown in your feed locally.`);
         }
       },
 

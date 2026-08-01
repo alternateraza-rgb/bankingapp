@@ -447,6 +447,14 @@ export async function createCustomTransactionCloud(input: {
     input.subtitle?.trim() ||
     (input.direction === "debit" ? "Custom purchase" : "Custom credit");
 
+  // Make sure Supabase wallet has the $5500 starter before debiting
+  const { error: ensureErr } = await supabase.rpc("ensure_starting_balance", {
+    p_amount: 5500,
+  });
+  if (ensureErr) {
+    console.warn("ensure_starting_balance before custom txn failed", ensureErr.message);
+  }
+
   // 1) Preferred: Niro/Wise RPC
   const rpc = await supabase.rpc("create_custom_transaction", {
     p_amount: Math.abs(input.amount),
