@@ -31,7 +31,7 @@ export function CurrencySelector({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as CurrencyCode)}
-        className="h-11 appearance-none rounded-full border border-transparent bg-wise-surface-2 py-2 pl-14 pr-10 text-base font-semibold text-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        className="h-11 appearance-none rounded-full border border-transparent bg-wise-surface-2 py-2 pl-14 pr-10 text-sm font-semibold text-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wise-green"
         aria-label={label ?? "Select currency"}
       >
         {options.map((code) => (

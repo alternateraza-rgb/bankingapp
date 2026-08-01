@@ -1,36 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownUp } from "lucide-react";
+import { ArrowDownUp, Info } from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  YAxis,
+} from "recharts";
 import { Button } from "@/components/ui/button";
-import { formatMoney } from "@/lib/format";
+import { calculateFee, convertAmount, getRate, getRateHistory } from "@/lib/exchange";
+import { formatMoney, formatRate } from "@/lib/format";
 import type { CurrencyCode } from "@/types";
 import { useAppStore } from "@/store/app-store";
 import { cn } from "@/lib/utils";
-import { CURRENCY_META } from "@/lib/currencies";
+import { CURRENCY_META } from "@/lib/exchange";
 
-const OPTIONS: CurrencyCode[] = [
-  "USD",
-  "EUR",
-  "GBP",
-  "PHP",
-  "PKR",
-  "AED",
-  "AUD",
-  "CAD",
-  "CNY",
-];
+const OPTIONS: CurrencyCode[] = ["USD", "EUR", "GBP", "PHP", "PKR", "AED", "AUD", "CAD", "CNY"];
 
-/** Lightweight FX sketch — not wired to live rates. Safe if unused on home. */
 export function TransferCalculator() {
   const router = useRouter();
   const setTransferDraft = useAppStore((s) => s.setTransferDraft);
   const [from, setFrom] = useState<CurrencyCode>("USD");
-  const [to, setTo] = useState<CurrencyCode>("EUR");
-  const [amountStr, setAmountStr] = useState("100");
+  const [to, setTo] = useState<CurrencyCode>("PHP");
+  const [amountStr, setAmountStr] = useState("1000");
 
   const amount = Number(amountStr.replace(/,/g, "")) || 0;
+  const fee = calculateFee(amount, from);
+  const net = Math.max(amount - fee, 0);
+  const target = convertAmount(net, from, to);
+  const rate = getRate(from, to);
+
+  const chartData = useMemo(
+    () => getRateHistory(from, to, "1M"),
+    [from, to]
+  );
 
   const swap = () => {
     setFrom(to);
@@ -49,12 +54,47 @@ export function TransferCalculator() {
   return (
     <section className="space-y-3">
       <h2 className="text-[22px] font-bold tracking-tight text-white">
-        Quick convert
+        Transfer calculator
       </h2>
       <div className="rounded-[28px] bg-wise-surface p-4">
-        <p className="text-sm text-wise-mute">
-          Estimate only — use Convert for live wallet FX.
+        <div className="h-28 w-full" aria-hidden>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="calcFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#9FE870" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#9FE870" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <YAxis
+                orientation="right"
+                domain={["auto", "auto"]}
+                tick={{ fontSize: 10, fill: "#8e8e93" }}
+                axisLine={false}
+                tickLine={false}
+                width={56}
+                tickCount={3}
+              />
+              <Area
+                type="monotone"
+                dataKey="rate"
+                stroke="#9FE870"
+                strokeWidth={2.5}
+                fill="url(#calcFill)"
+                dot={false}
+                activeDot={{ r: 4, fill: "#9FE870", stroke: "#000" }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="mt-1 flex justify-between text-[11px] text-wise-mute">
+          <span>Jun 20</span>
+          <span>Today</span>
+        </div>
+        <p className="mt-3 text-[15px] font-semibold text-white">
+          {formatRate(rate, from, to)}
         </p>
+
         <div className="relative mt-4 space-y-2">
           <CalcRow
             value={amountStr}
@@ -74,16 +114,39 @@ export function TransferCalculator() {
             </button>
           </div>
           <CalcRow
-            value={amount > 0 ? String(amount) : "0"}
+            value={
+              amount > 0
+                ? target.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })
+                : "0"
+            }
             onChange={() => undefined}
             currency={to}
             onCurrencyChange={setTo}
             editable={false}
           />
         </div>
-        <p className="mt-3 text-xs text-wise-mute">
-          From {formatMoney(amount, from)}
-        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-white/5 pt-4">
+          <div>
+            <p className="flex items-center gap-1 text-xs text-wise-mute">
+              Includes fees
+              <Info className="h-3 w-3" aria-hidden />
+            </p>
+            <p className="mt-1 text-[15px] font-semibold text-white">
+              {formatMoney(fee, from)}
+            </p>
+          </div>
+          <div className="border-l border-white/10 pl-3">
+            <p className="text-xs text-wise-mute">Should arrive</p>
+            <p className="mt-1 text-[15px] font-semibold text-white">
+              In 6 hours
+            </p>
+          </div>
+        </div>
+
         <Button className="mt-5 w-full" size="lg" onClick={send}>
           Send
         </Button>
@@ -123,7 +186,7 @@ function CalcRow({
       />
       <label className="relative shrink-0">
         <span className="flex h-10 items-center gap-1.5 rounded-full bg-wise-surface-2 pl-2.5 pr-2 text-sm font-semibold text-white">
-          <span aria-hidden>{CURRENCY_META[currency]?.flag ?? "💱"}</span>
+          <span aria-hidden>{CURRENCY_META[currency].flag}</span>
           {currency}
           <span className="text-wise-mute">▾</span>
         </span>
@@ -135,7 +198,7 @@ function CalcRow({
         >
           {OPTIONS.map((c) => (
             <option key={c} value={c}>
-              {CURRENCY_META[c]?.flag} {c}
+              {CURRENCY_META[c].flag} {c}
             </option>
           ))}
         </select>

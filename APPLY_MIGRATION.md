@@ -1,35 +1,51 @@
-# Apply Niro core migration
+# Apply Wise cards + transactions schema
 
-The Supabase schema for Niro lives in:
+Run this SQL once in your Supabase project (the one linked to the **bankingapp / Wise** Vercel project).
 
-`supabase/migrations/20260722000000_niro_core.sql`
+**File:** `supabase/migrations/20260801120039_wise_cards_transactions.sql`
 
 ## Steps
 
-1. Open your project in the [Supabase Dashboard](https://supabase.com/dashboard).
-2. Go to **SQL Editor**.
-3. Create a new query.
-4. Open `supabase/migrations/20260722000000_niro_core.sql` from this repo and **paste the entire file** into the editor.
-5. Run the query (or “Run” / Cmd+Enter).
-6. Confirm there are no errors. You should see tables such as `profiles`, `wallets`, `ledger_entries`, `contacts`, `cards`, `crypto_holdings`, plus RPCs like `transfer_p2p`, `convert_fiat`, `crypto_buy`, etc.
+1. Open [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor**
+2. Paste the full contents of the migration file
+3. Run it
+4. **Authentication → Providers → Email**
+   - For demos: turn **off** “Confirm email”
+   - Optional: enable **Anonymous** sign-ins for the Continue / guest button
 
-## After applying
+## Env vars (Vercel + local)
 
-1. Ensure `.env.local` has:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-2. **Authentication → Providers → Email** — disable **Confirm email** for smoother local demos (otherwise signup may require inbox confirmation).
-3. Restart `npm run dev`.
-4. Sign up a user — the migration’s profile/wallet triggers should provision balances.
-
-## Optional (CLI)
-
-If the Supabase CLI is linked to this project:
-
-```bash
-supabase db push
+```
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
 ```
 
-Prefer the SQL Editor paste if you are not using a linked remote project yet.
+Do **not** use `NEXT_SUPABASE_PUBLIC_*` — those are not exposed to the Next.js client.
 
-**Do not delete** `supabase/migrations/20260722000000_niro_core.sql` — it is the source of truth for the Niro schema.
+## What you get
+
+| Table / RPC | Purpose |
+|-------------|---------|
+| `profiles` | Created on auth signup |
+| `cards` | Virtual + custom cards |
+| `transactions` | All activity, including custom vendor txns |
+| `create_random_card` | Generate a card |
+| `create_custom_card` | Add a custom card |
+| `create_custom_transaction` | Amount + vendor name + logo |
+| `upsert_transaction` | Sync transfers / conversions / deposits |
+| Storage bucket `vendor-logos` | Vendor logo uploads |
+
+## App behavior after migrate
+
+- **Cards → Add card**: random virtual or custom → stored in Supabase when signed in
+- **Activity → Add custom transaction**: vendor, amount, logo URL/upload → stored in Supabase
+- Transfers, conversions, and add-money also sync via `upsert_transaction`
+
+## Starting balance ($5500) + sync
+
+Run these (after core + custom-txn RPC):
+
+1. `supabase/migrations/20260801122708_niro_starting_balance_5500.sql`
+2. `supabase/migrations/20260801124749_ensure_starting_balance_sync.sql` ← **required** so UI and Supabase wallets stay aligned
+
+`ensure_starting_balance()` is called on every login. Supabase wallet balance is the source of truth for money RPCs (fixes “insufficient funds” when the UI still shows $5500).

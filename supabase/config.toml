@@ -1,11 +1,7 @@
-# Minimal config for linked remote project workflows.
-# Schema is applied via SQL Editor or `supabase db push`.
+# Minimal Supabase project config for Wise migrations.
+# Link with: supabase link --project-ref <your-ref>
 
-[project]
-id = "nrrelzmieiyuybkghmgf"
-
-[api]
-enabled = true
+project_id = "wise-bankingapp"
 
 [db]
 major_version = 15

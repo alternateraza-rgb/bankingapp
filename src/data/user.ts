@@ -6,6 +6,9 @@ import type {
   User,
 } from "@/types";
 
+/** Starting balance for every new account (USD). */
+export const STARTING_BALANCE_USD = 5500;
+
 export const DEFAULT_USER: User = {
   id: "user_001",
   firstName: "Raza",
@@ -21,7 +24,7 @@ export const DEFAULT_USER: User = {
 export const INITIAL_BALANCES: CurrencyBalance[] = [
   {
     currency: "USD",
-    amount: 70820.45,
+    amount: STARTING_BALANCE_USD,
     flag: "🇺🇸",
     name: "US dollar",
     accountNumber: "****4821",
@@ -31,7 +34,7 @@ export const INITIAL_BALANCES: CurrencyBalance[] = [
   },
   {
     currency: "EUR",
-    amount: 1340.2,
+    amount: 0,
     flag: "🇪🇺",
     name: "Euro",
     accountNumber: "****9012",
@@ -41,7 +44,7 @@ export const INITIAL_BALANCES: CurrencyBalance[] = [
   },
   {
     currency: "GBP",
-    amount: 875.6,
+    amount: 0,
     flag: "🇬🇧",
     name: "British pound",
     accountNumber: "****3340",
@@ -52,7 +55,7 @@ export const INITIAL_BALANCES: CurrencyBalance[] = [
   },
   {
     currency: "PKR",
-    amount: 286450,
+    amount: 0,
     flag: "🇵🇰",
     name: "Pakistani rupee",
     accountNumber: "****7721",
@@ -61,7 +64,7 @@ export const INITIAL_BALANCES: CurrencyBalance[] = [
   },
   {
     currency: "CNY",
-    amount: 7920,
+    amount: 0,
     flag: "🇨🇳",
     name: "Chinese yuan",
     accountNumber: "****5590",
@@ -119,53 +122,20 @@ export const INITIAL_RECIPIENTS: Recipient[] = [
     currency: "GBP",
     accountLast4: "8821",
     bankName: "Barclays",
-    avatarColor: "#FFC091",
+    avatarColor: "#C5EDAB",
     initials: "JW",
   },
   {
     id: "rec_003",
-    name: "Marie Dubois",
+    name: "Marie Dupont",
     type: "personal",
+    email: "marie.d@email.com",
     country: "France",
     currency: "EUR",
-    accountLast4: "2209",
+    accountLast4: "2290",
     bankName: "BNP Paribas",
-    avatarColor: "#FFD7EF",
-    initials: "MD",
-  },
-  {
-    id: "rec_004",
-    name: "Bright Studio Ltd",
-    type: "business",
-    email: "finance@brightstudio.co",
-    country: "United States",
-    currency: "USD",
-    accountLast4: "1190",
-    bankName: "Chase",
-    avatarColor: "#FFEB69",
-    initials: "BS",
-  },
-  {
-    id: "rec_005",
-    name: "Li Wei",
-    type: "personal",
-    country: "China",
-    currency: "CNY",
-    accountLast4: "6734",
-    bankName: "ICBC",
-    avatarColor: "#C5EDAB",
-    initials: "LW",
-  },
-  {
-    id: "rec_006",
-    name: "Nordic Design GmbH",
-    type: "business",
-    country: "Germany",
-    currency: "EUR",
-    accountLast4: "4455",
-    bankName: "Deutsche Bank",
     avatarColor: "#9FE870",
-    initials: "ND",
+    initials: "MD",
   },
 ];
 
@@ -183,7 +153,12 @@ export const INITIAL_CARD: Card = {
   onlinePayments: true,
   contactless: true,
   foreignTransactions: true,
+  nickname: "Everyday",
+  color: "#163300",
+  isCustom: false,
 };
+
+export const INITIAL_CARDS: Card[] = [INITIAL_CARD];
 
 export const INITIAL_SECURITY: SecuritySetting = {
   passcodeEnabled: true,
@@ -203,13 +178,6 @@ export const INITIAL_SECURITY: SecuritySetting = {
       name: "MacBook Pro",
       location: "Karachi, PK",
       lastActive: "2026-07-19T21:10:00.000Z",
-      current: false,
-    },
-    {
-      id: "dev_003",
-      name: "Chrome on Windows",
-      location: "Lahore, PK",
-      lastActive: "2026-07-12T14:00:00.000Z",
       current: false,
     },
   ],

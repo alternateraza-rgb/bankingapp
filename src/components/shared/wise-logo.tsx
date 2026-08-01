@@ -2,102 +2,82 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { easeOut } from "@/lib/motion";
 
-interface NiroLogoProps {
+interface WiseLogoProps {
   className?: string;
   href?: string | null;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg";
+  /** icon = mark only; wordmark = mark + "wise"; badge = full official lockup */
   variant?: "wordmark" | "icon" | "badge";
-  animate?: boolean;
 }
 
-const markSize = { sm: 28, md: 34, lg: 44, xl: 56 } as const;
-const wordClass = {
-  sm: "text-[1.4rem]",
-  md: "text-[1.7rem]",
-  lg: "text-[2.25rem]",
-  xl: "text-[2.85rem]",
+const iconSize = { sm: 28, md: 34, lg: 48 } as const;
+const textSize = { sm: "text-xl", md: "text-2xl", lg: "text-4xl" } as const;
+const badgeSize = {
+  sm: { w: 120, h: 40 },
+  md: { w: 160, h: 52 },
+  lg: { w: 220, h: 72 },
 } as const;
 
-export function NiroMark({
-  size = 34,
-  className,
-  animate = false,
-}: {
-  size?: number;
-  className?: string;
-  animate?: boolean;
-}) {
-  const reduce = useReducedMotion();
-  const shouldAnimate = animate && !reduce;
-
-  return (
-    <motion.span
-      className={cn("relative inline-flex shrink-0 overflow-hidden rounded-[22%]", className)}
-      style={{ width: size, height: size }}
-      initial={shouldAnimate ? { opacity: 0, scale: 0.88 } : false}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, ease: easeOut }}
-      aria-hidden
-    >
-      <Image
-        src="/brand/niro-icon.png"
-        alt=""
-        width={size}
-        height={size}
-        className="h-full w-full object-cover"
-        priority
-      />
-    </motion.span>
-  );
-}
-
-export function NiroLogo({
+export function WiseLogo({
   className,
   href = "/home",
   size = "md",
   variant = "wordmark",
-  animate = false,
-}: NiroLogoProps) {
-  const reduce = useReducedMotion();
-  const shouldAnimate = animate && !reduce;
-  const s = markSize[size];
+}: WiseLogoProps) {
+  let mark: React.ReactNode;
 
-  const wordmark = (
-    <motion.span
-      className={cn(
-        "font-display text-white leading-none",
-        wordClass[size]
-      )}
-      style={{
-        fontFamily: "var(--font-niro-display), Syne, sans-serif",
-        letterSpacing: "-0.075em",
-        fontWeight: 800,
-      }}
-      initial={shouldAnimate ? { opacity: 0, x: -6 } : false}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.45, ease: easeOut, delay: 0.12 }}
-    >
-      niro
-    </motion.span>
-  );
-
-  const mark =
-    variant === "icon" ? (
-      <NiroMark size={s} animate={animate} className={className} />
-    ) : (
-      <span className={cn("inline-flex items-center gap-2.5", className)}>
-        <NiroMark size={s} animate={animate} />
-        {wordmark}
+  if (variant === "badge") {
+    const dims = badgeSize[size];
+    mark = (
+      <Image
+        src="/brand/wise-wordmark.png"
+        alt="Wise"
+        width={dims.w}
+        height={dims.h}
+        className={cn("rounded-2xl object-contain", className)}
+        priority
+      />
+    );
+  } else if (variant === "icon") {
+    mark = (
+      <Image
+        src="/brand/wise-icon.png"
+        alt="Wise"
+        width={iconSize[size]}
+        height={iconSize[size]}
+        className={cn("rounded-[22%] object-contain", className)}
+        priority
+      />
+    );
+  } else {
+    mark = (
+      <span className={cn("inline-flex items-center gap-2", className)}>
+        <Image
+          src="/brand/wise-icon.png"
+          alt=""
+          width={iconSize[size]}
+          height={iconSize[size]}
+          className="rounded-[22%] object-contain"
+          priority
+          aria-hidden
+        />
+        <span
+          className={cn(
+            "font-bold lowercase tracking-tight text-white leading-none",
+            textSize[size]
+          )}
+        >
+          wise
+        </span>
       </span>
     );
+  }
 
   if (href === null) {
     return (
-      <span className="inline-flex items-center" aria-label="Niro">
+      <span className="inline-flex" aria-label="Wise">
         {mark}
       </span>
     );
@@ -107,12 +87,9 @@ export function NiroLogo({
     <Link
       href={href}
       className="inline-flex items-center focus-visible:rounded-md"
-      aria-label="Niro home"
+      aria-label="Wise home"
     >
       {mark}
     </Link>
   );
 }
-
-/** @deprecated Use NiroLogo */
-export const WiseLogo = NiroLogo;

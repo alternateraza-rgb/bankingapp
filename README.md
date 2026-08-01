@@ -1,56 +1,76 @@
-# Niro
+# Wise
 
-Mobile-first fintech PWA — multi-currency wallets, P2P transfers, virtual Visa cards, and live crypto markets. Dark black & white UI. Simulated banking on **Supabase** (no real bank rails).
+Money without borders — send, spend, and receive internationally.
 
-## Stack
+A mobile-first personal finance PWA inspired by the Wise dark-mode iOS experience: multi-currency balances, transfers, conversion, cards, and recipients.
 
-- Next.js 15 (App Router) + React 19
-- Tailwind CSS v4 + Framer Motion + Recharts
-- Supabase Auth + Postgres (RLS + RPC money moves)
-- CoinGecko (proxied) for live crypto prices
+## Tech stack
 
-## Setup
+- Next.js 15 (App Router) + TypeScript (strict)
+- Tailwind CSS v4
+- Zustand + localStorage (UI state)
+- Supabase (cards + transactions persistence)
+- React Hook Form + Zod
+- Framer Motion, Recharts, Lucide React
+- `@ducanh2912/next-pwa`
 
-1. **Env** — `.env.local` (already gitignored):
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
-2. **Apply schema** — follow [APPLY_MIGRATION.md](./APPLY_MIGRATION.md) (paste `supabase/migrations/20260722000000_niro_core.sql` into the Supabase SQL Editor).
-
-3. **Auth settings** (recommended for demo) — Dashboard → Authentication → Providers → Email → turn **off** “Confirm email” so signups get a session immediately.
-
-4. **Run**
+## Getting started
 
 ```bash
 npm install
+cp .env.example .env.local   # add Supabase URL + anon key
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Try P2P
+### Supabase schema
 
-1. Sign up as `@alice` (and complete session).
-2. Sign up as `@bob` in another browser/profile (or sign out first).
-3. From Alice: Send → search `bob` → amount → confirm.
-4. Both balances and activity update via Realtime.
+Run `supabase/migrations/20260801120039_wise_cards_transactions.sql` in the SQL Editor.  
+See `APPLY_MIGRATION.md` for env var names and Auth settings.
 
-New users get demo wallets (USD / EUR / GBP) with a welcome top-up.
+### Sign in
+
+Use **Sign up** to create a real Supabase Auth user, then **Sign in** with those credentials.  
+There is no demo bypass — fake emails/passwords are rejected.
 
 ## Scripts
 
 | Command | Description |
-|---------|-------------|
-| `npm run dev` | Dev server (Turbopack) |
-| `npm run build` | Production build |
-| `npm run typecheck` | TypeScript |
+| --- | --- |
+| `npm run dev` | Development server (Turbopack) |
+| `npm run build` | Production build + service worker |
+| `npm start` | Serve production build |
 | `npm run lint` | ESLint |
+| `npm run typecheck` | TypeScript check |
+
+## Project structure
+
+```
+src/
+  app/           # Routes (auth + app shell)
+  components/    # UI and feature components
+  data/          # Seed balances, recipients, transactions
+  lib/           # Formatting, FX, motion, validators
+  services/      # Simulated async helpers
+  store/         # Zustand client state
+  types/         # Shared TypeScript models
+public/
+  brand/         # Wise logos
+  icons/         # PWA icons
+  manifest.webmanifest
+```
+
+## Main routes
+
+`/`, `/login`, `/signup`, `/onboarding`, `/home`, `/send`, `/convert`, `/balances/[currency]`, `/activity`, `/cards`, `/recipients`, `/payments`, `/profile`, `/help`, `/offline`
+
+## PWA
+
+Production builds register a service worker. On iPhone Safari: Share → **Add to Home Screen**. Theme color is black (`#000000`) to match the dark UI.
 
 ## Notes
 
-- All balance changes go through Postgres RPCs (`transfer_p2p`, `convert_fiat`, `topup_wallet`, `crypto_buy`, etc.) — not client `UPDATE`s.
-- Crypto buys/sells are **simulated** against your USD wallet at live market quotes.
-- Virtual cards are demo-only (fake PANs).
+- Balances, transfers, and card actions persist in `localStorage` under `wise-storage`.
+- Exchange rates are deterministic mock mid-market figures for a stable demo.
+- No real banking APIs or payments are connected.
