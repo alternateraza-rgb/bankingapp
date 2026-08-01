@@ -1,92 +1,101 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
 import { ArrowDownUp } from "lucide-react";
 import { MobileHeader } from "@/components/layout/mobile-header";
-import { MoneyInput } from "@/components/shared/money-input";
+import { MoneyInput, CurrencySelector } from "@/components/shared/money-input";
+import { ExchangeRateChart } from "@/components/convert/exchange-rate-chart";
+import { FeeBreakdown } from "@/components/send/fee-breakdown";
 import { Button } from "@/components/ui/button";
-import { useNiroData } from "@/hooks/use-niro-data";
-import { convertFiat } from "@/services/niro";
-import { formatMoney } from "@/lib/format";
-import { CURRENCY_META } from "@/lib/currencies";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useAppStore } from "@/store/app-store";
+import { calculateFee, convertAmount, getRate } from "@/lib/exchange";
+import { formatRate } from "@/lib/format";
 import type { CurrencyCode } from "@/types";
 import { toast } from "sonner";
+import { simulateStep } from "@/services/api";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { motion } from "framer-motion";
+import { Check } from "lucide-react";
 
 export default function ConvertPage() {
-  const { wallets, loading, refresh } = useNiroData();
-  const currencies = useMemo(
-    () => wallets.map((w) => w.currency as CurrencyCode),
-    [wallets]
-  );
+  const balances = useAppStore((s) => s.balances);
+  const executeConversion = useAppStore((s) => s.executeConversion);
+  const rateAlerts = useAppStore((s) => s.settings.rateAlerts);
+  const toggleRateAlert = useAppStore((s) => s.toggleRateAlert);
 
   const [from, setFrom] = useState<CurrencyCode>("USD");
   const [to, setTo] = useState<CurrencyCode>("EUR");
-  const [amountStr, setAmountStr] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<{
-    from: string;
-    to: string;
-    amount: number;
-  } | null>(null);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    if (!currencies.length || hydrated) return;
-    setFrom(currencies[0]);
-    setTo(currencies.find((c) => c !== currencies[0]) ?? currencies[0]);
-    setHydrated(true);
-  }, [currencies, hydrated]);
+  const [amountStr, setAmountStr] = useState("100");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const amount = Number(amountStr) || 0;
-  const fromWallet = wallets.find((w) => w.currency === from);
+  const fee = calculateFee(amount, from);
+  const net = Math.max(amount - fee, 0);
+  const target = convertAmount(net, from, to);
+  const rate = getRate(from, to);
+  const pairKey = `${from}_${to}`;
+  const balance = balances.find((b) => b.currency === from);
+
+  const live = useMemo(
+    () => ({
+      label: "Live rate",
+      value: formatRate(rate, from, to),
+    }),
+    [rate, from, to]
+  );
 
   const swap = () => {
     setFrom(to);
     setTo(from);
   };
 
-  const submit = async () => {
+  const runConvert = async () => {
     if (amount <= 0) {
-      toast.error("Enter an amount");
+      toast.error("Enter an amount to convert");
       return;
     }
     if (from === to) {
-      toast.error("Pick two different currencies");
+      toast.error("Choose two different currencies");
       return;
     }
-    if (fromWallet && amount > Number(fromWallet.balance)) {
+    if (balance && amount > balance.amount) {
       toast.error("Insufficient balance");
       return;
     }
-    setBusy(true);
-    try {
-      await convertFiat(from, to, amount);
-      await refresh();
-      setDone({ from, to, amount });
-      setAmountStr("");
-      toast.success("Converted");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Conversion failed");
-    } finally {
-      setBusy(false);
-    }
+    setLoading(true);
+    await simulateStep();
+    executeConversion(from, to, amount);
+    setLoading(false);
+    setConfirmOpen(false);
+    setSuccess(true);
+    toast.success("Conversion complete");
   };
 
-  if (done) {
+  if (success) {
     return (
       <div className="flex flex-1 flex-col">
         <MobileHeader title="Converted" showBack backHref="/home" />
-        <main className="flex flex-1 flex-col items-center px-4 pb-8 pt-10 text-center">
-          <h2 className="text-2xl font-bold text-white">Conversion complete</h2>
-          <p className="mt-2 text-sm text-wise-mute">
-            {formatMoney(done.amount, done.from)} → {done.to}
+        <main className="flex flex-1 flex-col items-center px-4 pt-16 text-center">
+          <motion.div
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="flex h-20 w-20 items-center justify-center rounded-full bg-wise-green"
+          >
+            <Check className="h-10 w-10 text-wise-forest" strokeWidth={3} />
+          </motion.div>
+          <h2 className="mt-6 text-2xl font-bold">Conversion complete</h2>
+          <p className="mt-2 text-sm text-wise-body">
+            Your balances have been updated.
           </p>
-          <Button className="mt-8 w-full" onClick={() => setDone(null)}>
+          <Button className="mt-8" onClick={() => setSuccess(false)}>
             Convert again
           </Button>
-          <Button className="mt-3 w-full" variant="secondary" asChild>
-            <Link href="/home">Home</Link>
+          <Button variant="secondary" className="mt-3" asChild>
+            <a href="/home">Back to home</a>
           </Button>
         </main>
       </div>
@@ -100,80 +109,91 @@ export default function ConvertPage() {
         <div className="relative space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm text-wise-mute">From</p>
-            <CurrencyPick
-              value={from}
-              options={currencies}
-              onChange={setFrom}
-            />
+            <CurrencySelector value={from} onChange={setFrom} label="From currency" />
           </div>
           <MoneyInput
-            label="Amount"
+            label="You convert"
             value={amountStr}
             onChange={setAmountStr}
             currency={from}
           />
-          <p className="text-xs text-wise-mute">
-            Available:{" "}
-            {loading
-              ? "…"
-              : fromWallet
-                ? formatMoney(Number(fromWallet.balance), from)
-                : "—"}
-          </p>
-
           <div className="flex justify-center">
             <button
               type="button"
               onClick={swap}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-wise-surface-2 text-white"
-              aria-label="Swap"
+              className="z-10 -my-1 flex h-11 w-11 items-center justify-center rounded-full border border-border bg-wise-surface text-wise-forest shadow-sm"
+              aria-label="Swap currencies"
             >
-              <ArrowDownUp className="h-4 w-4" />
+              <ArrowDownUp className="h-5 w-5" />
             </button>
           </div>
-
           <div className="flex items-center justify-between">
             <p className="text-sm text-wise-mute">To</p>
-            <CurrencyPick value={to} options={currencies} onChange={setTo} />
+            <CurrencySelector value={to} onChange={setTo} label="To currency" />
           </div>
+          <MoneyInput
+            label="You get"
+            value={amount > 0 ? String(target) : ""}
+            onChange={() => undefined}
+            currency={to}
+            readOnly
+          />
         </div>
+
+        <div className="flex items-center justify-between rounded-[20px] bg-wise-surface px-4 py-3">
+          <div>
+            <p className="text-xs text-wise-mute">{live.label}</p>
+            <p className="font-semibold text-white">{live.value}</p>
+          </div>
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-wise-positive">
+            <span className="h-2 w-2 rounded-full bg-wise-positive" aria-hidden />
+            Live
+          </span>
+        </div>
+
+        <ExchangeRateChart from={from} to={to} />
+
+        <div className="flex items-center justify-between rounded-[20px] bg-wise-surface px-4 py-3">
+          <Label htmlFor="alert">Rate alert for {from}/{to}</Label>
+          <Switch
+            id="alert"
+            checked={!!rateAlerts[pairKey]}
+            onCheckedChange={() => {
+              toggleRateAlert(pairKey);
+              toast.success(
+                rateAlerts[pairKey]
+                  ? "Rate alert off"
+                  : "Rate alert on"
+              );
+            }}
+          />
+        </div>
+
+        <FeeBreakdown
+          sourceAmount={amount}
+          sourceCurrency={from}
+          targetAmount={target}
+          targetCurrency={to}
+          fee={fee}
+          rate={rate}
+        />
       </main>
-      <div className="fixed inset-x-0 bottom-0 z-30 w-full max-w-full border-t border-white/5 bg-black/90 px-4 pt-3 backdrop-blur-md safe-pb lg:static lg:border-0 lg:bg-transparent lg:px-4 lg:pb-6">
-        <Button className="w-full" onClick={submit} disabled={busy || loading}>
-          {busy ? "Converting…" : "Convert"}
+
+      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-white/5 bg-black/90 px-4 pt-3 backdrop-blur-md safe-pb lg:static lg:border-0 lg:bg-transparent lg:px-4 lg:pb-6">
+        <Button className="w-full" onClick={() => setConfirmOpen(true)}>
+          Convert
         </Button>
       </div>
-    </div>
-  );
-}
 
-function CurrencyPick({
-  value,
-  options,
-  onChange,
-}: {
-  value: CurrencyCode;
-  options: CurrencyCode[];
-  onChange: (c: CurrencyCode) => void;
-}) {
-  const list = options.length ? options : (["USD"] as CurrencyCode[]);
-  return (
-    <label className="relative">
-      <span className="flex h-10 items-center gap-1.5 rounded-full bg-wise-surface-2 px-3 text-sm font-semibold text-white">
-        {CURRENCY_META[value]?.flag ?? "💱"} {value}
-        <span className="text-wise-mute">▾</span>
-      </span>
-      <select
-        className="absolute inset-0 cursor-pointer opacity-0"
-        value={value}
-        onChange={(e) => onChange(e.target.value as CurrencyCode)}
-      >
-        {list.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-    </label>
+      <ConfirmationDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Confirm conversion"
+        description={`Convert ${from} to ${to}? `}
+        confirmLabel="Confirm conversion"
+        onConfirm={runConvert}
+        loading={loading}
+      />
+    </div>
   );
 }

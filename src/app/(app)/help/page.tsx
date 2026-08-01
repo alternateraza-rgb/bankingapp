@@ -18,7 +18,7 @@ const topics = [
   },
   {
     title: "Is the card real?",
-    body: "Your Niro card works online and in stores. Freeze it anytime from the Cards tab.",
+    body: "Your Wise card works online and in stores. Freeze it anytime from the Cards tab.",
   },
   {
     title: "How do I reset my data?",

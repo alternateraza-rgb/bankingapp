@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export function Skeleton({
+export function SkeletonLoader({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
@@ -11,7 +11,3 @@ export function Skeleton({
     />
   );
 }
-
-/** @deprecated Use Skeleton */
-export const SkeletonLoader = Skeleton;
-

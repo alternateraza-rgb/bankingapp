@@ -1,96 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Search } from "lucide-react";
 import { MobileHeader } from "@/components/layout/mobile-header";
+import { RecipientCard } from "@/components/send/recipient-card";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAppStore } from "@/store/app-store";
-import { getContacts } from "@/services/niro";
-import { toast } from "sonner";
-import Link from "next/link";
-
-type ProfileHit = {
-  id: string;
-  handle: string;
-  full_name: string;
-  avatar_initials: string;
-};
-
-function normalizeProfile(
-  p: ProfileHit | ProfileHit[] | null | undefined
-): ProfileHit | null {
-  if (!p) return null;
-  return Array.isArray(p) ? p[0] ?? null : p;
-}
+import { PageTransition } from "@/lib/motion";
 
 export default function RecipientsPage() {
   const router = useRouter();
-  const setSendTarget = useAppStore((s) => s.setSendTarget);
+  const recipients = useAppStore((s) => s.recipients);
   const setTransferDraft = useAppStore((s) => s.setTransferDraft);
-  const [contacts, setContacts] = useState<ProfileHit[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
 
-  useEffect(() => {
-    void getContacts()
-      .then((rows) => {
-        const list = rows
-          .map((r) => normalizeProfile(r.profiles))
-          .filter((p): p is ProfileHit => Boolean(p));
-        setContacts(list);
-      })
-      .catch(() => toast.error("Could not load contacts"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const sendTo = (p: ProfileHit) => {
-    setSendTarget({
-      id: p.id,
-      handle: p.handle,
-      fullName: p.full_name,
-      initials: p.avatar_initials || p.handle.slice(0, 2).toUpperCase(),
-    });
-    setTransferDraft({ recipientId: p.id });
-    router.push("/send/amount");
-  };
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return recipients;
+    return recipients.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.bankName.toLowerCase().includes(q) ||
+        r.country.toLowerCase().includes(q)
+    );
+  }, [recipients, query]);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <PageTransition>
       <MobileHeader title="Recipients" />
-      <main className="flex flex-1 flex-col gap-3 px-4 pb-8">
-        <Button asChild variant="secondary" className="w-full">
-          <Link href="/send">Search Niro users</Link>
+      <main className="flex flex-1 flex-col px-4 pb-8">
+        <div className="relative mb-4">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-wise-mute" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search recipients"
+            className="border-transparent bg-wise-surface pl-10 text-white placeholder:text-wise-mute"
+          />
+        </div>
+        <Button
+          variant="secondary"
+          className="mb-4 w-full justify-start gap-3"
+          onClick={() => router.push("/send")}
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-wise-green text-wise-forest">
+            <Plus className="h-5 w-5" />
+          </span>
+          Add a recipient
         </Button>
-
-        {loading ? (
-          <p className="py-10 text-center text-sm text-wise-mute">Loading…</p>
-        ) : contacts.length === 0 ? (
-          <p className="py-10 text-center text-sm text-wise-mute">
-            No contacts yet. Send to someone to start building your list.
-          </p>
-        ) : (
-          contacts.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => sendTo(p)}
-              className="flex w-full items-center gap-3 rounded-[20px] bg-wise-surface px-4 py-3.5 text-left hover:bg-wise-surface-2"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-wise-surface-2 text-sm font-bold text-white">
-                {p.avatar_initials || p.handle.slice(0, 2).toUpperCase()}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-semibold text-white">
-                  {p.full_name || p.handle}
-                </span>
-                <span className="block truncate text-sm text-wise-mute">
-                  @{p.handle}
-                </span>
-              </span>
-              <span className="text-sm font-semibold text-wise-green">Send</span>
-            </button>
-          ))
-        )}
+        <div className="space-y-2">
+          {filtered.map((r) => (
+            <div key={r.id} className="rounded-[20px] bg-wise-surface">
+              <RecipientCard
+                recipient={r}
+                onSelect={() => {
+                  setTransferDraft({
+                    recipientId: r.id,
+                    targetCurrency: r.currency,
+                  });
+                  router.push("/send/amount");
+                }}
+              />
+            </div>
+          ))}
+        </div>
       </main>
-    </div>
+    </PageTransition>
   );
 }

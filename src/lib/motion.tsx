@@ -4,8 +4,6 @@ import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export const easeOut = [0.22, 1, 0.36, 1] as const;
-export const easePremium = [0.16, 1, 0.3, 1] as const;
-export const easeSoft = [0.33, 1, 0.68, 1] as const;
 
 export function useMotionSafe() {
   const reduced = useReducedMotion();
@@ -13,11 +11,11 @@ export function useMotionSafe() {
 }
 
 export const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 10 },
+  hidden: { opacity: 0, y: 14 },
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.32, ease: easePremium },
+    transition: { duration: 0.35, ease: easeOut },
   },
 };
 
@@ -25,16 +23,16 @@ export const fadeIn: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { duration: 0.25, ease: easeOut },
+    transition: { duration: 0.28, ease: easeOut },
   },
 };
 
 export const scaleIn: Variants = {
-  hidden: { opacity: 0, scale: 0.96 },
+  hidden: { opacity: 0, scale: 0.88 },
   show: {
     opacity: 1,
     scale: 1,
-    transition: { type: "spring", stiffness: 380, damping: 28 },
+    transition: { type: "spring", stiffness: 280, damping: 22 },
   },
 };
 
@@ -43,18 +41,18 @@ export const staggerContainer: Variants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.045,
-      delayChildren: 0.03,
+      staggerChildren: 0.06,
+      delayChildren: 0.04,
     },
   },
 };
 
 export const listItem: Variants = {
-  hidden: { opacity: 0, y: 8 },
+  hidden: { opacity: 0, y: 10 },
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.28, ease: easePremium },
+    transition: { duration: 0.28, ease: easeOut },
   },
 };
 
@@ -72,10 +70,10 @@ export function PageTransition({ children, className }: PageTransitionProps) {
 
   return (
     <motion.div
-      className={cn("flex min-w-0 flex-1 flex-col", className)}
-      initial={{ opacity: 0, y: 8 }}
+      className={cn("flex flex-1 flex-col", className)}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: easePremium }}
+      transition={{ duration: 0.32, ease: easeOut }}
     >
       {children}
     </motion.div>

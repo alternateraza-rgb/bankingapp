@@ -1,19 +1,13 @@
 {
-  "name": "Niro",
-  "short_name": "Niro",
-  "description": "Send, spend, convert, and hold crypto — Niro fintech PWA.",
+  "name": "Wise",
+  "short_name": "Wise",
+  "description": "Money without borders. Send, spend, and receive internationally.",
   "start_url": "/home",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "orientation": "portrait-primary",
   "icons": [
-    {
-      "src": "/brand/niro-icon.png",
-      "sizes": "1024x1024",
-      "type": "image/png",
-      "purpose": "any"
-    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",

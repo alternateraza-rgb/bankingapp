@@ -8,14 +8,10 @@ export function currencyDecimals(currency: CurrencyCode): number {
 
 export function formatMoney(
   amount: number,
-  currency: string,
+  currency: CurrencyCode,
   options?: { compact?: boolean; hideCurrency?: boolean }
 ): string {
-  const decimals = currencyDecimals(
-    (currency as CurrencyCode) in { USD: 1, EUR: 1, GBP: 1, PKR: 1, CNY: 1, PHP: 1, AED: 1, AUD: 1, CAD: 1 }
-      ? (currency as CurrencyCode)
-      : "USD"
-  );
+  const decimals = currencyDecimals(currency);
   if (options?.compact && Math.abs(amount) >= 10000) {
     return new Intl.NumberFormat("en-US", {
       style: options.hideCurrency ? "decimal" : "currency",

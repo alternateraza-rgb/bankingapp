@@ -3,28 +3,14 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Eye, EyeOff, Snowflake, Copy, Check } from "lucide-react";
+import type { Card } from "@/types";
 import { maskCardNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
-export type VirtualCardData = {
-  id: string;
-  cardholderName: string;
-  last4: string;
-  fullNumber: string;
-  expiry: string;
-  cvv: string;
-  network?: string;
-  frozen: boolean;
-  spendLimitDaily?: number;
-  spendLimitMonthly?: number;
-  spentToday?: number;
-  spentMonth?: number;
-};
-
 interface VirtualCardProps {
-  card: VirtualCardData;
+  card: Card;
   onToggleFreeze: () => void;
   className?: string;
 }
@@ -55,27 +41,24 @@ export function VirtualCard({
         whileHover={reduce ? undefined : { y: -4 }}
         className={cn(
           "relative overflow-hidden rounded-[24px] p-5 text-white shadow-lg shadow-black/20",
-          "bg-gradient-to-br from-[#1a1a1a] via-[#2a2a2a] to-[#0a0a0a]",
+          "bg-gradient-to-br from-[#163300] via-[#1f4a00] to-[#0e0f0c]",
           card.frozen && "opacity-70"
         )}
       >
         <motion.div
-          className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10"
+          className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-wise-green/20"
           animate={reduce ? undefined : { scale: [1, 1.08, 1] }}
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
         />
-        <div className="absolute -bottom-10 left-10 h-32 w-32 rounded-full bg-white/5" />
+        <div className="absolute -bottom-10 left-10 h-32 w-32 rounded-full bg-wise-cyan/15" />
         <div className="relative flex items-start justify-between">
           <div>
-            <p className="text-xs font-medium text-white/70">
-              Niro · Virtual debit
-            </p>
-            <p className="mt-1 text-sm font-semibold text-wise-green">
-              Virtual card
-            </p>
+            <p className="text-xs font-medium text-white/70">Wise · Virtual debit</p>
+            <p className="mt-1 text-sm font-semibold text-wise-green">Virtual card</p>
           </div>
+          {/* Visa wordmark approximation */}
           <span className="text-xl font-black italic tracking-tight text-white">
-            {(card.network ?? "visa").toUpperCase()}
+            VISA
           </span>
         </div>
         <p className="balance-amount relative mt-10 text-xl font-semibold tracking-[0.18em]">
@@ -97,9 +80,7 @@ export function VirtualCard({
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wider text-white/50">
-              CVV
-            </p>
+            <p className="text-[10px] uppercase tracking-wider text-white/50">CVV</p>
             <p className="text-sm font-semibold">
               {revealed ? card.cvv : "•••"}
             </p>

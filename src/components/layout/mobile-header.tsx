@@ -22,7 +22,7 @@ export function MobileHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-30 flex items-center justify-between gap-3 bg-black/90 px-4 py-3 backdrop-blur-md",
+        "sticky top-0 z-30 flex items-center justify-between gap-3 bg-black/90 px-4 py-3 backdrop-blur-md safe-pt",
         className
       )}
     >

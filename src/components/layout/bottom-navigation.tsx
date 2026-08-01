@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
-import { Home, CreditCard, Users, Bitcoin } from "lucide-react";
+import { Home, CreditCard, Users, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/cards", label: "Cards", icon: CreditCard },
-  { href: "/crypto", label: "Crypto", icon: Bitcoin },
-  { href: "/recipients", label: "People", icon: Users },
+  { href: "/recipients", label: "Recipients", icon: Users },
+  { href: "/payments", label: "Payments", icon: ArrowLeftRight },
 ] as const;
 
 export function BottomNavigation() {
