@@ -172,6 +172,12 @@ function mapTxn(row: DbTxn): Transaction {
 async function requireAuthedClient() {
   const supabase = tryCreateClient();
   if (!supabase) throw new Error("Supabase is not configured");
+  // Prefer getSession (local) over getUser (network) to avoid auth lock stalls
+  const { data: sessionData } = await supabase.auth.getSession();
+  const sessionUser = sessionData.session?.user;
+  if (sessionUser) {
+    return { supabase, userId: sessionUser.id };
+  }
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) throw new Error("Not authenticated");
   return { supabase, userId: data.user.id };

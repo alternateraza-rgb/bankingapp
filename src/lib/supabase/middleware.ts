@@ -29,9 +29,15 @@ export async function updateSession(request: NextRequest) {
   });
 
   // Refresh session — required for SSR cookie auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: { id: string } | null = null;
+  try {
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch (e) {
+    // Never block page load if Supabase auth is unreachable
+    console.warn("middleware auth refresh failed", e);
+    return supabaseResponse;
+  }
 
   const path = request.nextUrl.pathname;
   const isPublic =

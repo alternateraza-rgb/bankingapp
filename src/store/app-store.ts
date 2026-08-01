@@ -80,6 +80,8 @@ interface AppState {
   }) => void;
   completeOnboarding: () => void;
   setPasscodeCreated: () => void;
+  /** Clears local auth state without calling Supabase (safe inside auth callbacks). */
+  clearLocalAuth: () => void;
   signOut: () => Promise<void>;
 
   setTransferDraft: (partial: Partial<TransferDraft>) => void;
@@ -364,8 +366,7 @@ export const useAppStore = create<AppState>()(
           security: { ...s.security, passcodeEnabled: true },
         })),
 
-      signOut: async () => {
-        await signOutSupabase();
+      clearLocalAuth: () => {
         set({
           auth: defaultAuth,
           authUserId: null,
@@ -378,6 +379,11 @@ export const useAppStore = create<AppState>()(
           user: DEFAULT_USER,
           balances: INITIAL_BALANCES,
         });
+      },
+
+      signOut: async () => {
+        await signOutSupabase();
+        get().clearLocalAuth();
       },
 
       setTransferDraft: (partial) =>

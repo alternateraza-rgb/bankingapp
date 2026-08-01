@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Toaster } from "sonner";
 import { useAppStore } from "@/store/app-store";
 import {
-  getSupabaseUser,
+  getSupabaseSession,
   isSupabaseConfigured,
   profileFromAuthUser,
 } from "@/services/auth";
@@ -14,6 +14,7 @@ import {
   fetchCloudTransactions,
 } from "@/services/wise-cloud";
 import { tryCreateClient } from "@/lib/supabase/client";
+import type { Session } from "@supabase/supabase-js";
 
 const PUBLIC_PATHS = [
   "/",
@@ -24,6 +25,24 @@ const PUBLIC_PATHS = [
   "/manifest.webmanifest",
 ];
 
+async function syncCloudData(cancelled: () => boolean) {
+  const { syncBalancesFromCloud, replaceCloudData } = useAppStore.getState();
+  try {
+    await syncBalancesFromCloud();
+    const [cards, transactions] = await Promise.all([
+      fetchCloudCards(),
+      fetchCloudTransactions(),
+    ]);
+    if (cancelled()) return;
+    replaceCloudData({
+      cards,
+      ...(transactions.length > 0 ? { transactions } : {}),
+    });
+  } catch (e) {
+    console.warn("Cloud sync failed", e);
+  }
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const hydrated = useAppStore((s) => s.hydrated);
   const sessionChecked = useAppStore((s) => s.sessionChecked);
@@ -32,68 +51,76 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAppStore((s) => s.auth.isAuthenticated);
   const authUserId = useAppStore((s) => s.authUserId);
   const establishSession = useAppStore((s) => s.establishSession);
-  const replaceCloudData = useAppStore((s) => s.replaceCloudData);
-  const syncBalancesFromCloud = useAppStore((s) => s.syncBalancesFromCloud);
-  const signOut = useAppStore((s) => s.signOut);
+  const clearLocalAuth = useAppStore((s) => s.clearLocalAuth);
   const router = useRouter();
   const pathname = usePathname();
 
+  // Persist hydration — never leave the app stuck waiting
   useEffect(() => {
     if (useAppStore.persist.hasHydrated()) {
       setHydrated(true);
     }
+    const unsub = useAppStore.persist.onFinishHydration(() => {
+      setHydrated(true);
+    });
+    // Safety: if storage is blocked, still unblock the UI
+    const t = window.setTimeout(() => setHydrated(true), 1500);
+    return () => {
+      unsub();
+      window.clearTimeout(t);
+    };
   }, [setHydrated]);
 
   // Source of truth: Supabase session (not localStorage auth flags)
   useEffect(() => {
     if (!hydrated) return;
     let cancelled = false;
+    const isCancelled = () => cancelled;
 
-    const syncSession = async () => {
+    const applySignedIn = (session: Session) => {
+      const profile = profileFromAuthUser(session.user);
+      establishSession({ userId: session.user.id, profile });
+      // Defer cloud work so we never call auth APIs inside onAuthStateChange
+      window.setTimeout(() => {
+        if (cancelled) return;
+        void syncCloudData(isCancelled);
+      }, 0);
+    };
+
+    const bootstrap = async () => {
       if (!isSupabaseConfigured()) {
-        // Clear any stale local "signed in" state when Supabase is missing
         if (useAppStore.getState().auth.isAuthenticated) {
-          await signOut();
+          clearLocalAuth();
         }
         if (!cancelled) setSessionChecked(true);
         return;
       }
 
-      const user = await getSupabaseUser();
-      if (cancelled) return;
-
-      if (!user) {
-        const state = useAppStore.getState();
-        if (state.auth.isAuthenticated || state.authUserId) {
-          await signOut();
-        }
-        setSessionChecked(true);
-        return;
-      }
-
-      const profile = profileFromAuthUser(user);
-      establishSession({ userId: user.id, profile });
-
       try {
-        await syncBalancesFromCloud();
-        const [cards, transactions] = await Promise.all([
-          fetchCloudCards(),
-          fetchCloudTransactions(),
-        ]);
-        if (!cancelled) {
-          replaceCloudData({
-            cards,
-            ...(transactions.length > 0 ? { transactions } : {}),
-          });
-        }
-      } catch (e) {
-        console.warn("Session cloud sync failed", e);
-      }
+        // getSession is local/cookie-based; safer for bootstrap than getUser
+        const session = await getSupabaseSession();
+        if (cancelled) return;
 
-      if (!cancelled) setSessionChecked(true);
+        if (!session?.user) {
+          if (
+            useAppStore.getState().auth.isAuthenticated ||
+            useAppStore.getState().authUserId
+          ) {
+            clearLocalAuth();
+          }
+          setSessionChecked(true);
+          return;
+        }
+
+        applySignedIn(session);
+        setSessionChecked(true);
+      } catch (e) {
+        console.warn("Session bootstrap failed", e);
+        if (!cancelled) setSessionChecked(true);
+      }
     };
 
-    void syncSession();
+    void bootstrap();
 
     const client = tryCreateClient();
     if (!client) {
@@ -103,34 +130,33 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = client.auth.onAuthStateChange(async (event, session) => {
+    } = client.auth.onAuthStateChange((event, session) => {
+      // CRITICAL: keep this callback synchronous.
+      // Awaiting supabase.auth.* (getUser/getSession/signOut) here deadlocks
+      // the auth client and leaves the app on a black screen.
       if (cancelled) return;
+
+      if (event === "INITIAL_SESSION") {
+        // bootstrap() already applied the initial session
+        return;
+      }
+
       if (event === "SIGNED_OUT" || !session?.user) {
         if (useAppStore.getState().authUserId) {
-          await signOut();
+          clearLocalAuth();
         }
         return;
       }
+
       if (
         event === "SIGNED_IN" ||
         event === "TOKEN_REFRESHED" ||
         event === "USER_UPDATED"
       ) {
-        const profile = profileFromAuthUser(session.user);
-        establishSession({ userId: session.user.id, profile });
-        try {
-          await syncBalancesFromCloud();
-          const [cards, transactions] = await Promise.all([
-            fetchCloudCards(),
-            fetchCloudTransactions(),
-          ]);
-          replaceCloudData({
-            cards,
-            ...(transactions.length > 0 ? { transactions } : {}),
-          });
-        } catch (e) {
-          console.warn("Auth change sync failed", e);
-        }
+        window.setTimeout(() => {
+          if (cancelled || !session?.user) return;
+          applySignedIn(session);
+        }, 0);
       }
     });
 
@@ -141,10 +167,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [
     hydrated,
     establishSession,
-    replaceCloudData,
-    syncBalancesFromCloud,
+    clearLocalAuth,
     setSessionChecked,
-    signOut,
   ]);
 
   useEffect(() => {
