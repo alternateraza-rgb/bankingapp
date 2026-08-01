@@ -5,65 +5,158 @@ import { useRouter, usePathname } from "next/navigation";
 import { Toaster } from "sonner";
 import { useAppStore } from "@/store/app-store";
 import {
+  getSupabaseUser,
+  isSupabaseConfigured,
+  profileFromAuthUser,
+} from "@/services/auth";
+import {
   fetchCloudCards,
   fetchCloudTransactions,
-  isSupabaseConfigured,
 } from "@/services/wise-cloud";
+import { tryCreateClient } from "@/lib/supabase/client";
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/onboarding", "/offline", "/manifest.webmanifest"];
+const PUBLIC_PATHS = [
+  "/",
+  "/login",
+  "/signup",
+  "/onboarding",
+  "/offline",
+  "/manifest.webmanifest",
+];
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const hydrated = useAppStore((s) => s.hydrated);
+  const sessionChecked = useAppStore((s) => s.sessionChecked);
   const setHydrated = useAppStore((s) => s.setHydrated);
+  const setSessionChecked = useAppStore((s) => s.setSessionChecked);
   const isAuthenticated = useAppStore((s) => s.auth.isAuthenticated);
-  const mergeCloudData = useAppStore((s) => s.mergeCloudData);
+  const authUserId = useAppStore((s) => s.authUserId);
+  const establishSession = useAppStore((s) => s.establishSession);
+  const replaceCloudData = useAppStore((s) => s.replaceCloudData);
+  const signOut = useAppStore((s) => s.signOut);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // Fallback if persist rehydrate already finished before subscribe
     if (useAppStore.persist.hasHydrated()) {
       setHydrated(true);
     }
   }, [setHydrated]);
 
+  // Source of truth: Supabase session (not localStorage auth flags)
   useEffect(() => {
     if (!hydrated) return;
-    const isPublic = PUBLIC_PATHS.some(
-      (p) => pathname === p || pathname.startsWith(`${p}/`)
-    );
-    if (!isAuthenticated && !isPublic) {
-      router.replace("/login");
-    }
-    if (isAuthenticated && (pathname === "/login" || pathname === "/signup" || pathname === "/")) {
-      router.replace("/home");
-    }
-  }, [hydrated, isAuthenticated, pathname, router]);
-
-  useEffect(() => {
-    if (!hydrated || !isAuthenticated || !isSupabaseConfigured()) return;
     let cancelled = false;
-    (async () => {
+
+    const syncSession = async () => {
+      if (!isSupabaseConfigured()) {
+        // Clear any stale local "signed in" state when Supabase is missing
+        if (useAppStore.getState().auth.isAuthenticated) {
+          await signOut();
+        }
+        if (!cancelled) setSessionChecked(true);
+        return;
+      }
+
+      const user = await getSupabaseUser();
+      if (cancelled) return;
+
+      if (!user) {
+        const state = useAppStore.getState();
+        if (state.auth.isAuthenticated || state.authUserId) {
+          await signOut();
+        }
+        setSessionChecked(true);
+        return;
+      }
+
+      const profile = profileFromAuthUser(user);
+      establishSession({ userId: user.id, profile });
+
       try {
-        // Re-exported helper lives next to client; keep sync best-effort
-        const { tryCreateClient: create } = await import("@/lib/supabase/client");
-        const client = create();
-        if (!client) return;
-        const { data } = await client.auth.getSession();
-        if (!data.session || cancelled) return;
         const [cards, transactions] = await Promise.all([
           fetchCloudCards(),
           fetchCloudTransactions(),
         ]);
-        if (!cancelled) mergeCloudData({ cards, transactions });
+        if (!cancelled) replaceCloudData({ cards, transactions });
       } catch (e) {
-        console.warn("Background Supabase sync skipped", e);
+        console.warn("Session cloud sync failed", e);
       }
-    })();
+
+      if (!cancelled) setSessionChecked(true);
+    };
+
+    void syncSession();
+
+    const client = tryCreateClient();
+    if (!client) {
+      setSessionChecked(true);
+      return;
+    }
+
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange(async (event, session) => {
+      if (cancelled) return;
+      if (event === "SIGNED_OUT" || !session?.user) {
+        if (useAppStore.getState().authUserId) {
+          await signOut();
+        }
+        return;
+      }
+      if (
+        event === "SIGNED_IN" ||
+        event === "TOKEN_REFRESHED" ||
+        event === "USER_UPDATED"
+      ) {
+        const profile = profileFromAuthUser(session.user);
+        establishSession({ userId: session.user.id, profile });
+        try {
+          const [cards, transactions] = await Promise.all([
+            fetchCloudCards(),
+            fetchCloudTransactions(),
+          ]);
+          replaceCloudData({ cards, transactions });
+        } catch (e) {
+          console.warn("Auth change sync failed", e);
+        }
+      }
+    });
+
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
-  }, [hydrated, isAuthenticated, mergeCloudData]);
+  }, [
+    hydrated,
+    establishSession,
+    replaceCloudData,
+    setSessionChecked,
+    signOut,
+  ]);
+
+  useEffect(() => {
+    if (!hydrated || !sessionChecked) return;
+    const isPublic = PUBLIC_PATHS.some(
+      (p) => pathname === p || pathname.startsWith(`${p}/`)
+    );
+
+    const authed = Boolean(isAuthenticated && authUserId);
+
+    if (!authed && !isPublic) {
+      router.replace("/login");
+    }
+    if (authed && (pathname === "/login" || pathname === "/signup" || pathname === "/")) {
+      router.replace("/home");
+    }
+  }, [
+    hydrated,
+    sessionChecked,
+    isAuthenticated,
+    authUserId,
+    pathname,
+    router,
+  ]);
 
   return (
     <>

@@ -137,53 +137,68 @@ export default function CardsPage() {
           </div>
         ) : null}
 
-        <VirtualCard
-          card={card}
-          onToggleFreeze={() => {
-            updateCard({ frozen: !card.frozen });
-            toast.success(card.frozen ? "Card unfrozen" : "Card frozen");
-          }}
-        />
-
-        <div className="rounded-[24px] bg-wise-surface p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-white">Spending limit</p>
-            <p className="text-sm text-wise-mute">
-              {formatMoney(card.spendingUsed, "USD")} /{" "}
-              {formatMoney(card.spendingLimit, "USD")}
+        {cards.length === 0 ? (
+          <div className="rounded-[24px] bg-wise-surface px-5 py-10 text-center">
+            <CreditCard className="mx-auto h-8 w-8 text-wise-mute" />
+            <p className="mt-3 font-semibold text-white">No cards yet</p>
+            <p className="mt-1 text-sm text-wise-mute">
+              Generate a virtual card or add a custom one — saved to your account.
             </p>
+            <Button className="mt-5" onClick={() => setAddOpen(true)}>
+              Add your first card
+            </Button>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-wise-surface-2">
-            <div
-              className="h-full rounded-full bg-wise-green"
-              style={{ width: `${pct}%` }}
-              role="progressbar"
-              aria-valuenow={pct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Spending used"
+        ) : (
+          <>
+            <VirtualCard
+              card={card}
+              onToggleFreeze={() => {
+                updateCard({ frozen: !card.frozen });
+                toast.success(card.frozen ? "Card unfrozen" : "Card frozen");
+              }}
             />
-          </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="secondary" className="w-full" onClick={() => setAddOpen(true)}>
-            <CreditCard className="h-4 w-4" aria-hidden />
-            Add card
-          </Button>
-          <Button
-            variant="secondary"
-            className="w-full"
-            onClick={() =>
-              toast.message("Apple Wallet", {
-                description: "Opening Apple Wallet…",
-              })
-            }
-          >
-            <Wallet className="h-4 w-4" aria-hidden />
-            Apple Wallet
-          </Button>
-        </div>
+            <div className="rounded-[24px] bg-wise-surface p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-white">Spending limit</p>
+                <p className="text-sm text-wise-mute">
+                  {formatMoney(card.spendingUsed, "USD")} /{" "}
+                  {formatMoney(card.spendingLimit, "USD")}
+                </p>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-wise-surface-2">
+                <div
+                  className="h-full rounded-full bg-wise-green"
+                  style={{ width: `${pct}%` }}
+                  role="progressbar"
+                  aria-valuenow={pct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Spending used"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="secondary" className="w-full" onClick={() => setAddOpen(true)}>
+                <CreditCard className="h-4 w-4" aria-hidden />
+                Add card
+              </Button>
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() =>
+                  toast.message("Apple Wallet", {
+                    description: "Opening Apple Wallet…",
+                  })
+                }
+              >
+                <Wallet className="h-4 w-4" aria-hidden />
+                Apple Wallet
+              </Button>
+            </div>
+          </>
+        )}
 
         <section>
           <div className="mb-2 flex items-center justify-between">

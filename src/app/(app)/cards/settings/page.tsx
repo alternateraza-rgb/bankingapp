@@ -9,9 +9,21 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 export default function CardSettingsPage() {
+  const cards = useAppStore((s) => s.cards);
   const card = useAppStore((s) => s.card);
   const updateCard = useAppStore((s) => s.updateCard);
-  const [limit, setLimit] = useState(String(card.spendingLimit));
+  const [limit, setLimit] = useState(String(card.spendingLimit || 2500));
+
+  if (cards.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col">
+        <MobileHeader title="Card settings" showBack backHref="/cards" />
+        <main className="px-4 py-10 text-center text-sm text-wise-mute">
+          Add a card first to manage settings.
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 flex-col">

@@ -19,18 +19,13 @@ import type {
 import {
   DEFAULT_USER,
   INITIAL_BALANCES,
-  INITIAL_CARD,
-  INITIAL_CARDS,
-  INITIAL_RECIPIENTS,
   INITIAL_SECURITY,
 } from "@/data/user";
-import { INITIAL_TRANSACTIONS } from "@/data/transactions";
 import {
   calculateFee,
   convertAmount,
   getRate,
 } from "@/lib/exchange";
-import { buildCustomCard, buildRandomCard } from "@/lib/cards";
 import { generateId, generateReference } from "@/lib/utils";
 import { addBusinessDays, formatISO } from "date-fns";
 import {
@@ -56,10 +51,14 @@ interface AppState {
   security: SecuritySetting;
   settings: AppSettings;
   auth: AuthState;
+  /** Supabase auth.users id — scopes persisted account data */
+  authUserId: string | null;
   transferDraft: TransferDraft;
   hydrated: boolean;
+  sessionChecked: boolean;
 
   setHydrated: (value: boolean) => void;
+  setSessionChecked: (value: boolean) => void;
   setHideBalances: (hide: boolean) => void;
   updateSettings: (partial: Partial<AppSettings>) => void;
   updateSecurity: (partial: Partial<SecuritySetting>) => void;
@@ -68,10 +67,15 @@ interface AppState {
   updateUser: (partial: Partial<User>) => void;
   toggleRateAlert: (pair: string) => void;
 
+  /** @deprecated local-only — use establishSession */
   signIn: () => void;
+  establishSession: (input: {
+    userId: string;
+    profile: Partial<User> & { email: string };
+  }) => void;
   completeOnboarding: () => void;
   setPasscodeCreated: () => void;
-  signOut: () => void;
+  signOut: () => Promise<void>;
 
   setTransferDraft: (partial: Partial<TransferDraft>) => void;
   resetTransferDraft: () => void;
@@ -111,6 +115,12 @@ interface AppState {
     cardId?: string;
     affectBalance?: boolean;
   }) => Promise<Transaction>;
+  /** Replace account cloud slices for the signed-in user (source of truth). */
+  replaceCloudData: (input: {
+    cards?: Card[];
+    transactions?: Transaction[];
+  }) => void;
+  /** @deprecated use replaceCloudData */
   mergeCloudData: (input: {
     cards?: Card[];
     transactions?: Transaction[];
@@ -118,6 +128,25 @@ interface AppState {
   removeDevice: (deviceId: string) => void;
   resetAccountData: () => void;
 }
+
+const emptyCardPlaceholder: Card = {
+  id: "card_placeholder",
+  cardholderName: "",
+  last4: "0000",
+  fullNumber: "0000000000000000",
+  expiry: "01/30",
+  cvv: "000",
+  network: "visa",
+  frozen: false,
+  spendingLimit: 2500,
+  spendingUsed: 0,
+  onlinePayments: true,
+  contactless: true,
+  foreignTransactions: true,
+  nickname: "",
+  color: "#163300",
+  isCustom: false,
+};
 
 const defaultSettings: AppSettings = {
   hideBalances: false,
@@ -166,7 +195,7 @@ function adjustBalance(
 }
 
 function withActiveCard(cards: Card[], activeCardId: string): Card {
-  return cards.find((c) => c.id === activeCardId) ?? cards[0] ?? INITIAL_CARD;
+  return cards.find((c) => c.id === activeCardId) ?? cards[0] ?? emptyCardPlaceholder;
 }
 
 function queuePersist(txn: Transaction) {
@@ -181,18 +210,21 @@ export const useAppStore = create<AppState>()(
     (set, get) => ({
       user: DEFAULT_USER,
       balances: INITIAL_BALANCES,
-      recipients: INITIAL_RECIPIENTS,
-      transactions: INITIAL_TRANSACTIONS,
-      cards: INITIAL_CARDS,
-      activeCardId: INITIAL_CARD.id,
-      card: INITIAL_CARD,
+      recipients: [],
+      transactions: [],
+      cards: [],
+      activeCardId: emptyCardPlaceholder.id,
+      card: emptyCardPlaceholder,
       security: INITIAL_SECURITY,
       settings: defaultSettings,
       auth: defaultAuth,
+      authUserId: null,
       transferDraft: defaultDraft,
       hydrated: false,
+      sessionChecked: false,
 
       setHydrated: (value) => set({ hydrated: value }),
+      setSessionChecked: (value) => set({ sessionChecked: value }),
 
       setHideBalances: (hide) =>
         set((s) => ({ settings: { ...s.settings, hideBalances: hide } })),
@@ -244,18 +276,74 @@ export const useAppStore = create<AppState>()(
           },
         })),
 
-      signIn: () =>
-        set({
-          auth: {
-            isAuthenticated: true,
-            hasCompletedOnboarding: true,
-            hasPasscode: true,
-          },
-        }),
+      signIn: () => {
+        // Kept for legacy call sites — does nothing without a real session id
+        console.warn("signIn() is local-only; use establishSession after Supabase auth");
+      },
+
+      establishSession: ({ userId, profile }) => {
+        const prevId = get().authUserId;
+        const switchingUser = prevId && prevId !== userId;
+
+        set((s) => {
+          const nextUser: User = {
+            ...s.user,
+            ...profile,
+            id: userId,
+            email: profile.email,
+            firstName: profile.firstName ?? s.user.firstName,
+            lastName: profile.lastName ?? s.user.lastName,
+            avatarInitials:
+              profile.avatarInitials ??
+              `${(profile.firstName ?? "U")[0]}${(profile.lastName ?? "")[0] || ""}`.toUpperCase(),
+          };
+
+          // New / switched account: start empty; cloud sync fills cards + txns
+          if (switchingUser || !prevId) {
+            return {
+              authUserId: userId,
+              user: nextUser,
+              auth: {
+                isAuthenticated: true,
+                hasCompletedOnboarding: true,
+                hasPasscode: s.auth.hasPasscode,
+              },
+              cards: [],
+              activeCardId: emptyCardPlaceholder.id,
+              card: {
+                ...emptyCardPlaceholder,
+                cardholderName: `${nextUser.firstName} ${nextUser.lastName}`.trim(),
+              },
+              transactions: [],
+              recipients: [],
+              balances: INITIAL_BALANCES.map((b) => ({
+                ...b,
+                accountHolder: `${nextUser.firstName} ${nextUser.lastName}`.trim(),
+              })),
+              transferDraft: defaultDraft,
+            };
+          }
+
+          return {
+            authUserId: userId,
+            user: nextUser,
+            auth: {
+              isAuthenticated: true,
+              hasCompletedOnboarding: true,
+              hasPasscode: s.auth.hasPasscode,
+            },
+          };
+        });
+      },
 
       completeOnboarding: () =>
         set((s) => ({
-          auth: { ...s.auth, hasCompletedOnboarding: true, isAuthenticated: true },
+          auth: {
+            ...s.auth,
+            hasCompletedOnboarding: true,
+            // only mark authenticated if we already have a supabase user
+            isAuthenticated: Boolean(s.authUserId),
+          },
         })),
 
       setPasscodeCreated: () =>
@@ -264,11 +352,19 @@ export const useAppStore = create<AppState>()(
           security: { ...s.security, passcodeEnabled: true },
         })),
 
-      signOut: () => {
-        void signOutSupabase();
+      signOut: async () => {
+        await signOutSupabase();
         set({
           auth: defaultAuth,
+          authUserId: null,
           transferDraft: defaultDraft,
+          cards: [],
+          transactions: [],
+          recipients: [],
+          activeCardId: emptyCardPlaceholder.id,
+          card: emptyCardPlaceholder,
+          user: DEFAULT_USER,
+          balances: INITIAL_BALANCES,
         });
       },
 
@@ -415,128 +511,96 @@ export const useAppStore = create<AppState>()(
       },
 
       createRandomCard: async (input) => {
-        const name = `${get().user.firstName} ${get().user.lastName}`.trim();
-        let card: Card | null = null;
-        if (isSupabaseConfigured()) {
-          try {
-            card = await createRandomCardCloud({
-              cardholderName: name,
-              network: input?.network,
-              nickname: input?.nickname,
-              color: input?.color,
-              spendingLimit: input?.spendingLimit,
-            });
-          } catch (err) {
-            console.warn("Cloud random card failed, using local", err);
-          }
+        if (!get().authUserId) {
+          throw new Error("Sign in required");
         }
-        card ??= buildRandomCard({
+        const name = `${get().user.firstName} ${get().user.lastName}`.trim();
+        if (!isSupabaseConfigured()) {
+          throw new Error("Supabase is not configured");
+        }
+        const card = await createRandomCardCloud({
           cardholderName: name,
           network: input?.network,
           nickname: input?.nickname,
           color: input?.color,
           spendingLimit: input?.spendingLimit,
         });
+        if (!card) throw new Error("Could not create card");
 
         set((s) => {
-          const cards = [card!, ...s.cards];
+          const cards = [card, ...s.cards.filter((c) => c.id !== card.id)];
           return {
             cards,
-            activeCardId: card!.id,
-            card: card!,
+            activeCardId: card.id,
+            card,
           };
         });
         return card;
       },
 
       createCustomCard: async (input) => {
-        let card: Card | null = null;
-        if (isSupabaseConfigured()) {
-          try {
-            card = await createCustomCardCloud(input);
-          } catch (err) {
-            console.warn("Cloud custom card failed, using local", err);
-          }
+        if (!get().authUserId) {
+          throw new Error("Sign in required");
         }
-        card ??= buildCustomCard(input);
-        if (!card.cardholderName) {
+        if (!isSupabaseConfigured()) {
+          throw new Error("Supabase is not configured");
+        }
+        if (!input.cardholderName.trim()) {
           throw new Error("Cardholder name is required");
         }
+        const card = await createCustomCardCloud(input);
+        if (!card) throw new Error("Could not create card");
 
         set((s) => {
-          const cards = [card!, ...s.cards];
+          const cards = [card, ...s.cards.filter((c) => c.id !== card.id)];
           return {
             cards,
-            activeCardId: card!.id,
-            card: card!,
+            activeCardId: card.id,
+            card,
           };
         });
         return card;
       },
 
       addCustomTransaction: async (input) => {
+        if (!get().authUserId) {
+          throw new Error("Sign in required");
+        }
+        if (!isSupabaseConfigured()) {
+          throw new Error("Supabase is not configured");
+        }
         const direction = input.direction ?? "debit";
         const affectBalance = input.affectBalance ?? true;
-        const signed =
-          direction === "debit" ? -Math.abs(input.amount) : Math.abs(input.amount);
 
-        let transaction: Transaction | null = null;
-        if (isSupabaseConfigured()) {
-          try {
-            transaction = await createCustomTransactionCloud({
-              amount: Math.abs(input.amount),
-              currency: input.currency,
-              vendorName: input.vendorName,
-              direction,
-              vendorLogoUrl: input.vendorLogoUrl,
-              title: input.title,
-              subtitle: input.subtitle,
-              type: input.type ?? "custom",
-              cardId: input.cardId,
-            });
-          } catch (err) {
-            console.warn("Cloud custom transaction failed, using local", err);
-          }
-        }
-
-        transaction ??= {
-          id: generateId("txn"),
-          type: input.type ?? "custom",
-          status: "completed",
-          title: input.title?.trim() || input.vendorName,
-          subtitle:
-            input.subtitle?.trim() ||
-            (direction === "debit" ? "Custom purchase" : "Custom credit"),
-          amount: signed,
+        const transaction = await createCustomTransactionCloud({
+          amount: Math.abs(input.amount),
           currency: input.currency,
-          fee: 0,
-          feeCurrency: input.currency,
-          reference: generateReference(),
-          date: new Date().toISOString(),
-          merchantOrRecipient: input.vendorName,
           vendorName: input.vendorName,
+          direction,
           vendorLogoUrl: input.vendorLogoUrl,
-          icon: input.vendorLogoUrl,
+          title: input.title,
+          subtitle: input.subtitle,
+          type: input.type ?? "custom",
           cardId: input.cardId,
-          isCustom: true,
-        };
+        });
+        if (!transaction) throw new Error("Could not create transaction");
 
         set((s) => {
           let balances = s.balances;
           let cards = s.cards;
           if (affectBalance) {
-            balances = adjustBalance(balances, input.currency, transaction!.amount);
+            balances = adjustBalance(balances, input.currency, transaction.amount);
           }
           if (
             input.cardId &&
             direction === "debit" &&
-            transaction!.status === "completed"
+            transaction.status === "completed"
           ) {
             cards = cards.map((c) =>
               c.id === input.cardId
                 ? {
                     ...c,
-                    spendingUsed: c.spendingUsed + Math.abs(transaction!.amount),
+                    spendingUsed: c.spendingUsed + Math.abs(transaction.amount),
                   }
                 : c
             );
@@ -545,49 +609,44 @@ export const useAppStore = create<AppState>()(
             balances,
             cards,
             card: withActiveCard(cards, s.activeCardId),
-            transactions: [transaction!, ...s.transactions],
+            transactions: [
+              transaction,
+              ...s.transactions.filter((t) => t.id !== transaction.id),
+            ],
           };
         });
-
-        if (!isSupabaseConfigured() || !transaction.id.includes("-")) {
-          // already persisted via RPC when cloud succeeded with UUID
-        } else if (transaction.isCustom && transaction.reference.startsWith("CTX")) {
-          // created via RPC
-        } else {
-          queuePersist(transaction);
-        }
 
         return transaction;
       },
 
-      mergeCloudData: ({ cards, transactions }) => {
+      replaceCloudData: ({ cards, transactions }) => {
         set((s) => {
-          const nextCards =
-            cards && cards.length > 0
-              ? [
-                  ...cards,
-                  ...s.cards.filter((c) => !cards.some((x) => x.id === c.id)),
-                ]
-              : s.cards;
-          const nextTxns =
-            transactions && transactions.length > 0
-              ? [
-                  ...transactions,
-                  ...s.transactions.filter(
-                    (t) => !transactions.some((x) => x.reference === t.reference)
-                  ),
-                ]
-              : s.transactions;
+          const nextCards = cards ?? s.cards;
+          const nextTxns = transactions ?? s.transactions;
           const activeCardId =
             nextCards.find((c) => c.id === s.activeCardId)?.id ??
             nextCards[0]?.id ??
-            s.activeCardId;
+            emptyCardPlaceholder.id;
           return {
             cards: nextCards,
             transactions: nextTxns,
             activeCardId,
-            card: withActiveCard(nextCards, activeCardId),
+            card:
+              nextCards.length > 0
+                ? withActiveCard(nextCards, activeCardId)
+                : {
+                    ...emptyCardPlaceholder,
+                    cardholderName: `${s.user.firstName} ${s.user.lastName}`.trim(),
+                  },
           };
+        });
+      },
+
+      mergeCloudData: ({ cards, transactions }) => {
+        // Prefer cloud as source of truth for synced slices
+        get().replaceCloudData({
+          cards: cards ?? undefined,
+          transactions: transactions ?? undefined,
         });
       },
 
@@ -603,14 +662,16 @@ export const useAppStore = create<AppState>()(
         set({
           user: DEFAULT_USER,
           balances: INITIAL_BALANCES,
-          recipients: INITIAL_RECIPIENTS,
-          transactions: INITIAL_TRANSACTIONS,
-          cards: INITIAL_CARDS,
-          activeCardId: INITIAL_CARD.id,
-          card: INITIAL_CARD,
+          recipients: [],
+          transactions: [],
+          cards: [],
+          activeCardId: emptyCardPlaceholder.id,
+          card: emptyCardPlaceholder,
           security: INITIAL_SECURITY,
           settings: defaultSettings,
           transferDraft: defaultDraft,
+          auth: defaultAuth,
+          authUserId: null,
         }),
     }),
     {
@@ -626,25 +687,39 @@ export const useAppStore = create<AppState>()(
         security: state.security,
         settings: state.settings,
         auth: state.auth,
+        authUserId: state.authUserId,
       }),
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<AppState>;
-        const cards =
-          p.cards && p.cards.length > 0
-            ? p.cards
-            : p.card
-              ? [p.card]
-              : current.cards;
+        // Never trust stale local "authenticated" without a supabase user id
+        const authUserId = p.authUserId ?? null;
+        const auth: AuthState = authUserId
+          ? {
+              isAuthenticated: true,
+              hasCompletedOnboarding: p.auth?.hasCompletedOnboarding ?? true,
+              hasPasscode: p.auth?.hasPasscode ?? false,
+            }
+          : defaultAuth;
+        const cards = authUserId ? p.cards ?? [] : [];
+        const transactions = authUserId ? p.transactions ?? [] : [];
         const activeCardId =
-          p.activeCardId && cards.some((c) => c.id === p.activeCardId)
-            ? p.activeCardId
-            : cards[0]?.id ?? current.activeCardId;
+          cards.find((c) => c.id === p.activeCardId)?.id ??
+          cards[0]?.id ??
+          emptyCardPlaceholder.id;
         return {
           ...current,
           ...p,
+          authUserId,
+          auth,
           cards,
+          transactions,
+          recipients: authUserId ? p.recipients ?? [] : [],
           activeCardId,
-          card: withActiveCard(cards, activeCardId),
+          card:
+            cards.length > 0
+              ? withActiveCard(cards, activeCardId)
+              : emptyCardPlaceholder,
+          sessionChecked: false,
         };
       },
       onRehydrateStorage: () => (state) => {

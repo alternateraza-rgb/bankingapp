@@ -23,7 +23,7 @@ function OnboardingInner() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const completeOnboarding = useAppStore((s) => s.completeOnboarding);
   const setPasscodeCreated = useAppStore((s) => s.setPasscodeCreated);
-  const signIn = useAppStore((s) => s.signIn);
+  const authUserId = useAppStore((s) => s.authUserId);
   const [loading, setLoading] = useState(false);
 
   const {
@@ -55,10 +55,14 @@ function OnboardingInner() {
   };
 
   const finish = async () => {
+    if (!authUserId) {
+      toast.error("Sign in with Supabase before continuing");
+      router.replace("/login");
+      return;
+    }
     setLoading(true);
     await simulateStep();
     completeOnboarding();
-    signIn();
     setLoading(false);
     router.replace("/home");
   };
@@ -77,18 +81,24 @@ function OnboardingInner() {
             transfers with Wise.
           </p>
           <div className="mt-auto space-y-3 pt-10">
-            <Button className="w-full" onClick={() => setStep("verify")}>
+            <Button
+              className="w-full"
+              onClick={() => {
+                if (!authUserId) {
+                  router.replace("/signup");
+                  return;
+                }
+                setStep("verify");
+              }}
+            >
               Get started
             </Button>
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => {
-                signIn();
-                router.replace("/home");
-              }}
+              onClick={() => router.replace(authUserId ? "/home" : "/login")}
             >
-              Continue
+              {authUserId ? "Go to home" : "Sign in"}
             </Button>
           </div>
         </div>

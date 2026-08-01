@@ -11,12 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signInSchema, type SignInValues } from "@/lib/validators";
 import { useAppStore } from "@/store/app-store";
-import { simulateStep } from "@/services/api";
 import {
-  ensureSupabaseSession,
+  isSupabaseConfigured,
+  profileFromAuthUser,
+  signInWithEmail,
+} from "@/services/auth";
+import {
   fetchCloudCards,
   fetchCloudTransactions,
-  isSupabaseConfigured,
 } from "@/services/wise-cloud";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -24,10 +26,11 @@ import { easeOut } from "@/lib/motion";
 
 export default function LoginPage() {
   const router = useRouter();
-  const signIn = useAppStore((s) => s.signIn);
-  const mergeCloudData = useAppStore((s) => s.mergeCloudData);
+  const establishSession = useAppStore((s) => s.establishSession);
+  const replaceCloudData = useAppStore((s) => s.replaceCloudData);
   const [loading, setLoading] = useState(false);
   const reduce = useReducedMotion();
+  const configured = isSupabaseConfigured();
   const {
     register,
     handleSubmit,
@@ -35,66 +38,45 @@ export default function LoginPage() {
   } = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
-      email: "raza@wise.com",
-      password: "wise1234",
+      email: "",
+      password: "",
     },
   });
 
-  const finishSignIn = async () => {
-    if (isSupabaseConfigured()) {
+  const onSubmit = async (values: SignInValues) => {
+    if (!configured) {
+      toast.error("Supabase is not configured on this deployment.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await signInWithEmail(values.email, values.password);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+
+      const profile = profileFromAuthUser(result.user);
+      establishSession({
+        userId: result.user.id,
+        profile,
+      });
+
       try {
         const [cards, transactions] = await Promise.all([
           fetchCloudCards(),
           fetchCloudTransactions(),
         ]);
-        mergeCloudData({ cards, transactions });
+        replaceCloudData({ cards, transactions });
       } catch (e) {
-        console.warn("Cloud sync on login failed", e);
-      }
-    }
-    signIn();
-    toast.success("Signed in");
-    router.replace("/home");
-  };
-
-  const onSubmit = async (values: SignInValues) => {
-    setLoading(true);
-    try {
-      await simulateStep();
-      if (isSupabaseConfigured()) {
-        const session = await ensureSupabaseSession({
-          email: values.email,
-          password: values.password,
+        console.warn("Initial cloud sync failed", e);
+        toast.message("Signed in", {
+          description: "Could not load cloud data yet — pull to refresh in Activity.",
         });
-        if (!session.ok) {
-          toast.error(
-            session.message ??
-              "Cloud sign-in failed. Check Supabase Auth / confirm email."
-          );
-          // Still allow local demo sign-in
-        }
       }
-      await finishSignIn();
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const continueAsGuest = async () => {
-    setLoading(true);
-    try {
-      await simulateStep();
-      if (isSupabaseConfigured()) {
-        const session = await ensureSupabaseSession();
-        if (!session.ok) {
-          toast.message("Continuing offline", {
-            description:
-              session.message ??
-              "Enable Anonymous sign-ins or create a user in Supabase.",
-          });
-        }
-      }
-      await finishSignIn();
+      toast.success("Signed in");
+      router.replace("/home");
     } finally {
       setLoading(false);
     }
@@ -112,9 +94,17 @@ export default function LoginPage() {
           Welcome back
         </h1>
         <p className="mt-2 text-sm text-wise-body">
-          Sign in to your Wise account.
+          Sign in with your Supabase account.
         </p>
       </motion.div>
+
+      {!configured ? (
+        <p className="mt-6 rounded-2xl bg-wise-surface p-4 text-sm text-wise-yellow">
+          Missing{" "}
+          <code className="text-white">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+          <code className="text-white">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
+        </p>
+      ) : null}
 
       <motion.form
         initial={reduce ? false : { opacity: 0, y: 20 }}
@@ -156,38 +146,20 @@ export default function LoginPage() {
             </p>
           ) : null}
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="w-full" disabled={loading || !configured}>
           {loading ? "Signing in…" : "Sign in"}
         </Button>
       </motion.form>
 
-      <motion.div
-        initial={reduce ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.25, duration: 0.35 }}
-      >
-        <Button
-          variant="secondary"
-          className="mt-3 w-full"
-          onClick={continueAsGuest}
-          disabled={loading}
+      <p className="mt-6 text-center text-sm text-wise-body">
+        New here?{" "}
+        <Link
+          href="/signup"
+          className="font-semibold text-wise-forest underline"
         >
-          Continue
-        </Button>
-
-        <p className="mt-6 text-center text-sm text-wise-body">
-          New here?{" "}
-          <Link
-            href="/signup"
-            className="font-semibold text-wise-forest underline"
-          >
-            Create account
-          </Link>
-        </p>
-        <p className="mt-auto pt-10 text-center text-xs text-wise-mute">
-          Money without borders
-        </p>
-      </motion.div>
+          Create account
+        </Link>
+      </p>
     </div>
   );
 }

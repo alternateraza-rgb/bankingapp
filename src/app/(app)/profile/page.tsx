@@ -122,9 +122,8 @@ export default function ProfilePage() {
         confirmLabel="Sign out"
         destructive
         onConfirm={() => {
-          signOut();
           setSignOutOpen(false);
-          router.replace("/login");
+          void signOut().then(() => router.replace("/login"));
         }}
       />
     </div>

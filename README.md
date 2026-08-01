@@ -31,12 +31,8 @@ See `APPLY_MIGRATION.md` for env var names and Auth settings.
 
 ### Sign in
 
-| Field | Value |
-| --- | --- |
-| Email | `raza@wise.com` |
-| Password | `wise1234` |
-
-Or tap **Continue** on the login screen (uses Anonymous auth if enabled).
+Use **Sign up** to create a real Supabase Auth user, then **Sign in** with those credentials.  
+There is no demo bypass — fake emails/passwords are rejected.
 
 ## Scripts
 

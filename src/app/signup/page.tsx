@@ -10,15 +10,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signUpSchema, type SignUpValues } from "@/lib/validators";
 import { useAppStore } from "@/store/app-store";
-import { simulateStep } from "@/services/api";
-import { ensureSupabaseSession, isSupabaseConfigured } from "@/services/wise-cloud";
+import {
+  isSupabaseConfigured,
+  profileFromAuthUser,
+  signUpWithEmail,
+} from "@/services/auth";
 import { toast } from "sonner";
 import { useState } from "react";
 
 export default function SignupPage() {
   const router = useRouter();
-  const updateUser = useAppStore((s) => s.updateUser);
+  const establishSession = useAppStore((s) => s.establishSession);
   const [loading, setLoading] = useState(false);
+  const configured = isSupabaseConfigured();
   const {
     register,
     handleSubmit,
@@ -28,31 +32,44 @@ export default function SignupPage() {
   });
 
   const onSubmit = async (values: SignUpValues) => {
+    if (!configured) {
+      toast.error("Supabase is not configured on this deployment.");
+      return;
+    }
     setLoading(true);
     try {
-      await simulateStep();
-      if (isSupabaseConfigured()) {
-        const session = await ensureSupabaseSession({
-          email: values.email,
-          password: values.password,
-          fullName: `${values.firstName} ${values.lastName}`,
-        });
-        if (!session.ok && session.reason === "confirm_email") {
-          toast.message("Confirm your email", {
-            description: "Then sign in to sync cards and transactions.",
-          });
-        } else if (!session.ok) {
-          toast.error(session.message ?? "Could not create cloud account");
-        }
-      }
-      updateUser({
+      const result = await signUpWithEmail({
+        email: values.email,
+        password: values.password,
+        fullName: `${values.firstName} ${values.lastName}`,
         firstName: values.firstName,
         lastName: values.lastName,
-        email: values.email,
-        avatarInitials: `${values.firstName[0]}${values.lastName[0]}`.toUpperCase(),
       });
-      toast.success("Account created — verify your email");
-      router.push("/onboarding?step=verify");
+
+      if (!result.ok) {
+        if (result.reason === "confirm_email") {
+          toast.message("Confirm your email", {
+            description: result.message,
+          });
+          router.push("/login");
+          return;
+        }
+        toast.error(result.message);
+        return;
+      }
+
+      const profile = profileFromAuthUser(result.user);
+      establishSession({
+        userId: result.user.id,
+        profile: {
+          ...profile,
+          firstName: values.firstName,
+          lastName: values.lastName,
+          avatarInitials: `${values.firstName[0]}${values.lastName[0]}`.toUpperCase(),
+        },
+      });
+      toast.success("Account created");
+      router.replace("/home");
     } finally {
       setLoading(false);
     }
@@ -63,8 +80,16 @@ export default function SignupPage() {
       <WiseLogo href={null} size="md" />
       <h1 className="mt-8 text-3xl font-bold text-white">Create account</h1>
       <p className="mt-2 text-sm text-wise-body">
-        Create your Wise account to get started.
+        Create a real account — credentials are stored in Supabase Auth.
       </p>
+
+      {!configured ? (
+        <p className="mt-6 rounded-2xl bg-wise-surface p-4 text-sm text-wise-yellow">
+          Missing{" "}
+          <code className="text-white">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+          <code className="text-white">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
+        </p>
+      ) : null}
 
       <form
         onSubmit={handleSubmit(onSubmit)}
@@ -128,8 +153,8 @@ export default function SignupPage() {
             </p>
           ) : null}
         </div>
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Creating…" : "Continue"}
+        <Button type="submit" className="w-full" disabled={loading || !configured}>
+          {loading ? "Creating…" : "Create account"}
         </Button>
       </form>
 
