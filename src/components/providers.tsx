@@ -78,7 +78,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
           fetchCloudCards(),
           fetchCloudTransactions(),
         ]);
-        if (!cancelled) replaceCloudData({ cards, transactions });
+        if (!cancelled) {
+          replaceCloudData({
+            cards,
+            ...(transactions.length > 0 ? { transactions } : {}),
+          });
+        }
       } catch (e) {
         console.warn("Session cloud sync failed", e);
       }
@@ -116,7 +121,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
             fetchCloudCards(),
             fetchCloudTransactions(),
           ]);
-          replaceCloudData({ cards, transactions });
+          replaceCloudData({
+            cards,
+            ...(transactions.length > 0 ? { transactions } : {}),
+          });
         } catch (e) {
           console.warn("Auth change sync failed", e);
         }

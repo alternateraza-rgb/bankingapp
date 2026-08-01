@@ -474,7 +474,13 @@ export async function fetchCloudTransactions(): Promise<Transaction[]> {
     .select("*")
     .order("created_at", { ascending: false });
   if (!ledger.error && ledger.data) {
-    return (ledger.data as DbLedger[]).map(mapLedger);
+    return (ledger.data as DbLedger[])
+      .filter((row) => {
+        // Hide legacy "demo funds to explore niro" welcome rows
+        const blob = `${row.title} ${row.subtitle}`.toLowerCase();
+        return !blob.includes("demo funds") && !blob.includes("explore niro");
+      })
+      .map(mapLedger);
   }
 
   // Wise fallback: transactions table

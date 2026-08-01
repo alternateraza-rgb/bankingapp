@@ -21,6 +21,7 @@ import {
   INITIAL_BALANCES,
   INITIAL_SECURITY,
 } from "@/data/user";
+import { buildStarterTransactions } from "@/data/transactions";
 import {
   calculateFee,
   convertAmount,
@@ -298,8 +299,9 @@ export const useAppStore = create<AppState>()(
               `${(profile.firstName ?? "U")[0]}${(profile.lastName ?? "")[0] || ""}`.toUpperCase(),
           };
 
-          // New / switched account: start empty; cloud sync fills cards + txns
+          // New / switched account: $5500 + realistic starter activity
           if (switchingUser || !prevId) {
+            const holder = `${nextUser.firstName} ${nextUser.lastName}`.trim();
             return {
               authUserId: userId,
               user: nextUser,
@@ -312,13 +314,13 @@ export const useAppStore = create<AppState>()(
               activeCardId: emptyCardPlaceholder.id,
               card: {
                 ...emptyCardPlaceholder,
-                cardholderName: `${nextUser.firstName} ${nextUser.lastName}`.trim(),
+                cardholderName: holder,
               },
-              transactions: [],
+              transactions: buildStarterTransactions(),
               recipients: [],
               balances: INITIAL_BALANCES.map((b) => ({
                 ...b,
-                accountHolder: `${nextUser.firstName} ${nextUser.lastName}`.trim(),
+                accountHolder: holder,
               })),
               transferDraft: defaultDraft,
             };
@@ -675,7 +677,8 @@ export const useAppStore = create<AppState>()(
         }),
     }),
     {
-      name: "wise-storage",
+      // Bump key to clear old ~$74k demo balances from localStorage
+      name: "wise-storage-v3",
       partialize: (state) => ({
         user: state.user,
         balances: state.balances,

@@ -67,7 +67,11 @@ export default function LoginPage() {
           fetchCloudCards(),
           fetchCloudTransactions(),
         ]);
-        replaceCloudData({ cards, transactions });
+        // Keep local starter history when cloud has nothing useful yet
+        replaceCloudData({
+          cards,
+          ...(transactions.length > 0 ? { transactions } : {}),
+        });
       } catch (e) {
         console.warn("Initial cloud sync failed", e);
         toast.message("Signed in", {

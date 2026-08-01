@@ -40,3 +40,11 @@ Do **not** use `NEXT_SUPABASE_PUBLIC_*` — those are not exposed to the Next.js
 - **Cards → Add card**: random virtual or custom → stored in Supabase when signed in
 - **Activity → Add custom transaction**: vendor, amount, logo URL/upload → stored in Supabase
 - Transfers, conversions, and add-money also sync via `upsert_transaction`
+
+## Starting balance ($5500)
+
+Also run (after core):
+
+`supabase/migrations/20260801122708_niro_starting_balance_5500.sql`
+
+This replaces the old $1000 “Welcome bonus / demo funds to explore Niro” grant with **$5500 USD**, seeds ~1 month of realistic Apple/Starbucks/Alipay/etc. activity, and updates existing USD wallets to 5500.
