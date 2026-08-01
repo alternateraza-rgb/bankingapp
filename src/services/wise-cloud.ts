@@ -604,15 +604,49 @@ export async function ensureAndFetchBalances(
   return fetchWalletBalances();
 }
 
-/** Top up via Niro RPC when available; keeps Supabase wallet in sync with UI. */
-export async function topUpWalletCloud(currency: string, amount: number) {
+/**
+ * Credit a wallet in Supabase and return the new balance.
+ * Prefers topup_wallet; falls back to create_custom_transaction (credit).
+ */
+export async function topUpWalletCloud(
+  currency: string,
+  amount: number
+): Promise<{ balance: number; currency: string }> {
   const { supabase } = await requireAuthedClient();
-  const { data, error } = await supabase.rpc("topup_wallet", {
-    p_currency: currency,
+  const code = currency.toUpperCase();
+
+  const rpc = await supabase.rpc("topup_wallet", {
+    p_currency: code,
     p_amount: amount,
   });
-  if (error) throw new Error(error.message);
-  return data as { balance?: number; currency?: string } | null;
+
+  if (!rpc.error && rpc.data) {
+    const row = coerceRpcRow<{ balance?: number; currency?: string }>(rpc.data);
+    if (row?.balance != null) {
+      return { balance: Number(row.balance), currency: row.currency ?? code };
+    }
+  }
+
+  // Fallback: credit via custom txn RPC (affects wallet balance)
+  await createCustomTransactionCloud({
+    amount: Math.abs(amount),
+    currency: code,
+    vendorName: "Bank transfer in",
+    direction: "credit",
+    title: "Added money",
+    subtitle: "Added money",
+    type: "deposit",
+  });
+
+  const wallets = await fetchWalletBalances();
+  const balance = wallets[code as CurrencyCode];
+  if (balance == null) {
+    throw new Error(
+      rpc.error?.message ||
+        "Could not top up wallet — install topup_wallet or create_custom_transaction"
+    );
+  }
+  return { balance: Number(balance), currency: code };
 }
 
 export async function uploadVendorLogo(file: File): Promise<string | null> {

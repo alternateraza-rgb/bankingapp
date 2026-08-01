@@ -92,19 +92,22 @@ export default function BalanceDetailPage({
     toast.success(`${label} copied`);
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const n = Number(amount);
     if (!n || n <= 0) {
       toast.error("Enter a valid amount");
       return;
     }
     setLoading(true);
-    setTimeout(() => {
-      addMoney(currency, n);
-      setLoading(false);
+    try {
+      await addMoney(currency, n);
       setAddOpen(false);
       toast.success("Money added");
-    }, 500);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add money");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

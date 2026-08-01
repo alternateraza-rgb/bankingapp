@@ -33,7 +33,6 @@ import {
   createCustomTransactionCloud,
   createRandomCardCloud,
   ensureAndFetchBalances,
-  fetchWalletBalances,
   isSupabaseConfigured,
   persistTransactionCloud,
   setCardFrozenCloud,
@@ -92,7 +91,7 @@ interface AppState {
     to: CurrencyCode,
     amount: number
   ) => Conversion;
-  addMoney: (currency: CurrencyCode, amount: number) => void;
+  addMoney: (currency: CurrencyCode, amount: number) => Promise<void>;
   createRandomCard: (input?: {
     network?: Card["network"];
     nickname?: string;
@@ -507,7 +506,7 @@ export const useAppStore = create<AppState>()(
         return conversion;
       },
 
-      addMoney: (currency, amount) => {
+      addMoney: async (currency, amount) => {
         const transaction: Transaction = {
           id: generateId("txn"),
           type: "deposit",
@@ -522,22 +521,32 @@ export const useAppStore = create<AppState>()(
           date: new Date().toISOString(),
           merchantOrRecipient: "Bank transfer in",
         };
+
+        // Optimistic UI update
         set((s) => ({
           balances: adjustBalance(s.balances, currency, amount),
           transactions: [transaction, ...s.transactions],
         }));
 
-        // Prefer Niro topup_wallet so Supabase balance matches UI
-        if (isSupabaseConfigured()) {
-          void topUpWalletCloud(currency, amount)
-            .then(async () => {
-              const wallets = await fetchWalletBalances();
-              get().applyWalletBalances(wallets);
-            })
-            .catch((err) => {
-              console.warn("topup_wallet failed, falling back to ledger sync", err);
-              queuePersist(transaction);
-            });
+        if (!isSupabaseConfigured()) return;
+
+        try {
+          // Await cloud credit so Home total cannot be overwritten by a stale sync
+          const result = await topUpWalletCloud(currency, amount);
+          get().applyWalletBalances({ [result.currency as CurrencyCode]: result.balance });
+          // Refresh full wallet set + keep deposit visible
+          try {
+            await get().syncBalancesFromCloud();
+          } catch {
+            // already applied returned balance
+          }
+        } catch (err) {
+          console.error("Add money cloud sync failed", err);
+          throw new Error(
+            err instanceof Error
+              ? err.message
+              : "Could not add money in Supabase"
+          );
         }
       },
 
